@@ -57,10 +57,16 @@
 							</section>
 						</div>
 						<div class="col-4 col-6-medium col-12-small">
-							<section class="box style1">
+							<section class="box style1 ml-projects-card">
 								<span class="icon solid featured fa-camera-retro"></span>
 								<h3>ML Research</h3>
 								<p>Building and evaluating models for structure prediction, relaxation, and materials design.</p>
+								<button type="button" class="ml-projects-toggle" aria-expanded="false">ML projects</button>
+								<ul class="ml-projects-list" aria-label="ML projects">
+									<li><a href="#" aria-disabled="true" onclick="return false;">Bloom Filters for Molecules (under construction)</a></li>
+									<li><a href="#" aria-disabled="true" onclick="return false;">Active Learning with Constraints in Symbolic Regression (under construction)</a></li>
+									<li><a href="#" aria-disabled="true" onclick="return false;">Bayesian Optimization with LLMs for Materials (under construction)</a></li>
+								</ul>
 							</section>
 						</div>
 						<div class="col-4 col-6-medium col-12-small">
@@ -91,6 +97,27 @@
 								<a href="GRPO_For_Materials/blog_post.html" class="image featured"><img src="GRPO_For_Materials/chgnet_finetuning_performance.png" alt="CHGNet fine-tuning performance" /></a>
 								<h3><a href="GRPO_For_Materials/blog_post.html">RL Crystal Relaxation</a></h3>
 								<p>Blog post on the GRPO environment for crystal relaxation with CHGNet.</p>
+							</article>
+						</div>
+						<div class="col-4 col-6-medium col-12-small">
+							<article class="box style2">
+								<a href="#" class="image featured" aria-disabled="true" onclick="return false;"><img src="GRPO_For_Materials/chgnet_finetuning_performance.png" alt="Bloom filters for molecules preview" /></a>
+								<h3><a href="#" aria-disabled="true" onclick="return false;">Bloom Filters for Molecules</a></h3>
+								<p><strong>Under construction.</strong> Compact molecular representations for fast screening.</p>
+							</article>
+						</div>
+						<div class="col-4 col-6-medium col-12-small">
+							<article class="box style2">
+								<a href="#" class="image featured" aria-disabled="true" onclick="return false;"><img src="GRPO_For_Materials/chgnet_finetuning_performance.png" alt="Active learning with constraints preview" /></a>
+								<h3><a href="#" aria-disabled="true" onclick="return false;">Active Learning with Constraints in Symbolic Regression</a></h3>
+								<p><strong>Under construction.</strong> Constraint-aware discovery of interpretable equations.</p>
+							</article>
+						</div>
+						<div class="col-4 col-6-medium col-12-small">
+							<article class="box style2">
+								<a href="#" class="image featured" aria-disabled="true" onclick="return false;"><img src="GRPO_For_Materials/chgnet_finetuning_performance.png" alt="Bayesian optimization with LLMs preview" /></a>
+								<h3><a href="#" aria-disabled="true" onclick="return false;">Bayesian Optimization with LLMs for Materials</a></h3>
+								<p><strong>Under construction.</strong> LLM-guided acquisition for materials search.</p>
 							</article>
 						</div>
 					</div>
@@ -130,6 +157,24 @@
 			<script src="assets/js/breakpoints.min.js"></script>
 			<script src="assets/js/util.js"></script>
 			<script src="assets/js/main.js"></script>
+			<script>
+				(function () {
+					var toggles = document.querySelectorAll('.ml-projects-toggle');
+					if (!toggles.length) {
+						return;
+					}
+					toggles.forEach(function (toggle) {
+						toggle.addEventListener('click', function () {
+							var card = toggle.closest('.ml-projects-card');
+							if (!card) {
+								return;
+							}
+							var isOpen = card.classList.toggle('is-open');
+							toggle.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+						});
+					});
+				})();
+			</script>
 
 	</body>
 </html>
