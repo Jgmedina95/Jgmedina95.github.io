@@ -1,0 +1,451 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Crystal Generation Evaluation Environment</title>
+  <style>
+    :root {
+      --bg: #f7f9fc;
+      --text: #1a1a1a;
+      --card-bg: white;
+      --h2: #1e40af;
+      --h3: #1e3a8a;
+      --code-bg: #eef2ff;
+      --header-bg: linear-gradient(135deg, #1e3a8a, #2563eb);
+      --card-shadow: 0 8px 24px rgba(0,0,0,0.06);
+    }
+
+    [data-theme="dark"] {
+      --bg: #121212;
+      --text: #e0e0e0;
+      --card-bg: #1e1e1e;
+      --h2: #60a5fa;
+      --h3: #93c5fd;
+      --code-bg: #333;
+      --header-bg: linear-gradient(135deg, #0f172a, #1e3a8a);
+      --card-shadow: 0 8px 24px rgba(0,0,0,0.5);
+    }
+
+    /* Dark Mode Overrides for Inline Styles */
+    [data-theme="dark"] h3[style] { color: var(--h3) !important; }
+    [data-theme="dark"] span[style*="#e0f2fe"] { background-color: #0c4a6e !important; color: #e0f2fe !important; }
+    [data-theme="dark"] span[style*="#f3f4f6"] { background-color: #374151 !important; color: #f9fafb !important; }
+    [data-theme="dark"] span[style*="#fef3c7"] { background-color: #451a03 !important; color: #fef3c7 !important; }
+    [data-theme="dark"] span[style*="#dcfce7"] { background-color: #064e3b !important; color: #dcfce7 !important; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen;
+      line-height: 1.6;
+      margin: 0;
+      padding: 0;
+      background: var(--bg);
+      color: var(--text);
+      transition: background 0.3s, color 0.3s;
+    }
+
+    header {
+      background: var(--header-bg);
+      color: white;
+      padding: 3rem 1.5rem;
+      position: relative;
+    }
+
+    header h1 {
+      margin: 0 0 0.5rem 0;
+      font-size: 2.2rem;
+    }
+
+    header p {
+      max-width: 800px;
+      font-size: 1.1rem;
+      opacity: 0.95;
+    }
+
+    main {
+      max-width: 900px;
+      margin: 2.5rem auto;
+      padding: 0 1.5rem;
+    }
+
+    section {
+      margin-bottom: 2.5rem;
+    }
+
+    h2 {
+      color: var(--h2);
+      margin-bottom: 0.75rem;
+    }
+
+    h3 {
+      margin-top: 1.5rem;
+      color: var(--h3);
+    }
+
+    ul {
+      margin-left: 1.2rem;
+    }
+
+    li {
+      margin-bottom: 0.5rem;
+    }
+
+    code {
+      background: var(--code-bg);
+      padding: 0.2rem 0.4rem;
+      border-radius: 4px;
+      font-size: 0.95em;
+    }
+
+    .card {
+      background: var(--card-bg);
+      border-radius: 8px;
+      padding: 1.5rem;
+      box-shadow: var(--card-shadow);
+    }
+
+    footer {
+      text-align: center;
+      font-size: 0.9rem;
+      color: #555;
+      padding: 2rem 1rem;
+    }
+    
+    /* Toggle Switch */
+    .theme-switch-wrapper {
+      position: absolute;
+      top: 1.5rem;
+      right: 1.5rem;
+      display: flex;
+      align-items: center;
+      color: white;
+      font-size: 0.9rem;
+    }
+    .theme-switch-wrapper em { margin-left: 10px; font-style: normal; }
+    .theme-switch { display: inline-block; height: 24px; position: relative; width: 44px; }
+    .theme-switch input { display:none; }
+    .slider { background-color: #ccc; bottom: 0; cursor: pointer; left: 0; position: absolute; right: 0; top: 0; transition: .4s; border-radius: 34px; }
+    .slider:before { background-color: #fff; bottom: 3px; content: ""; height: 18px; left: 3px; position: absolute; transition: .4s; width: 18px; border-radius: 50%; }
+    input:checked + .slider { background-color: #4ade80; }
+    input:checked + .slider:before { transform: translateX(20px); }
+
+    /* Table Styles */
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 1rem 0;
+      font-size: 0.9rem;
+    }
+    
+    th, td {
+      text-align: left;
+      padding: 0.75rem;
+      border-bottom: 1px solid #e5e7eb;
+    }
+
+    [data-theme="dark"] th, [data-theme="dark"] td {
+      border-bottom: 1px solid #333;
+    }
+
+    th {
+      font-weight: 600;
+      color: var(--h3);
+      background-color: rgba(0,0,0,0.02);
+    }
+    
+    [data-theme="dark"] th {
+      background-color: rgba(255,255,255,0.05);
+    }
+
+    tr:hover {
+      background-color: rgba(0,0,0,0.01);
+    }
+
+    /* Pre/Code block adjustments */
+    pre {
+      background: var(--code-bg);
+      padding: 1rem;
+      border-radius: 6px;
+      overflow-x: auto;
+      margin: 1rem 0;
+    }
+    
+    pre code {
+      background: none;
+      padding: 0;
+      color: inherit;
+    }
+
+    .cta-button {
+      display: inline-block;
+      background-color: white;
+      color: #1e40af;
+      padding: 0.75rem 1.5rem;
+      border-radius: 6px;
+      text-decoration: none;
+      font-weight: 600;
+      margin-top: 1.5rem;
+      transition: transform 0.1s;
+      box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    }
+    
+    .cta-button:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 6px 8px rgba(0,0,0,0.15);
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="theme-switch-wrapper">
+     <label class="theme-switch" for="checkbox">
+        <input type="checkbox" id="checkbox" />
+        <div class="slider round"></div>
+     </label>
+     <em>Dark Mode</em>
+  </div>
+  <h1>Crystal Generation Evaluation Environment</h1>
+  <p>
+    A structured evaluation environment designed to measure progress in large language models
+    on crystal reasoning, materials science concepts, and structured scientific outputs.
+  </p>
+  <a href="https://app.primeintellect.ai/dashboard/environments/jmedina9/crystal-generation" class="cta-button" target="_blank">View on Prime Intellect</a>
+</header>
+
+<main>
+
+  <section class="card">
+    <h2>Overview</h2>
+    <p>
+      This environment was created as an <strong>evaluation-only benchmark</strong> for large language
+      models, focusing on their ability to reason about crystalline materials, generate structured
+      outputs, and improve performance across progressively more complex tasks.
+    </p>
+    <p>
+      Rather than testing surface-level text generation, the environment emphasizes
+      <strong>scientific consistency, compositional reasoning, and constraint satisfaction</strong>.
+    </p>
+  </section>
+
+  <section class="card">
+    <h2>Motivation</h2>
+    <p>
+      Many existing LLM benchmarks focus on natural language understanding or general reasoning.
+      However, evaluating progress in <strong>scientific domains</strong>—especially materials science—
+      requires more specialized tasks.
+    </p>
+    <p>
+      This environment was designed to answer questions like:
+    </p>
+    <ul>
+      <li>Can an LLM reason about valid crystal compositions?</li>
+      <li>Can it follow structural and chemical constraints?</li>
+      <li>Does performance improve as models scale or are fine-tuned?</li>
+      <li>Can errors be detected and penalized in a granular way?</li>
+    </ul>
+  </section>
+
+  <section class="card">
+    <h2>Task Design</h2>
+    <p>
+      The environment contains a <strong>collection of evaluation tasks</strong> that test different
+      aspects of crystal generation and reasoning. Tasks are intentionally diverse to avoid
+      overfitting to a single pattern.
+    </p>
+
+    <h3>Key characteristics</h3>
+    <ul>
+      <li>Progressive difficulty from basic composition checks to structured outputs</li>
+      <li>Clear input/output contracts</li>
+      <li>Deterministic evaluation whenever possible</li>
+      <li>Explicit penalties for invalid or inconsistent generations</li>
+    </ul>
+  </section>
+
+  <section class="card">
+    <h2>Supported Evaluation Tasks</h2>
+    <p>
+      The environment evaluates models across five distinct tasks. All tasks utilize the <strong>Materials Project (mp-20)</strong> dataset 
+      as the ground truth source.
+    </p>
+
+    <div style="margin-top: 1.5rem;">
+      <h3 style="color: #2563eb; font-size: 1.1rem; margin-bottom: 0.5rem;">1. Composition Constrained Generation</h3>
+      <div style="margin-bottom: 0.5rem; font-size: 0.85rem; color: #555;">
+        <span style="background: #e0f2fe; color: #0369a1; padding: 2px 8px; border-radius: 4px; margin-right: 8px;">CIF Generation</span>
+        <span style="background: #f3f4f6; color: #374151; padding: 2px 8px; border-radius: 4px;">Dataset: MP-20</span>
+      </div>
+      <p style="margin-bottom: 1.2rem; font-size: 0.95rem;">
+        <strong>Goal:</strong> Generate a valid, stable crystal structure that strictly adheres to a given chemical formula 
+        (e.g., <code>SrTiO3</code>). The model must produce valid lattice parameters and atomic coordinates while maintaining exact stoichiometry.
+      </p>
+
+      <h3 style="color: #2563eb; font-size: 1.1rem; margin-bottom: 0.5rem;">2. Symmetry-Composition Constrained Generation</h3>
+      <div style="margin-bottom: 0.5rem; font-size: 0.85rem; color: #555;">
+        <span style="background: #e0f2fe; color: #0369a1; padding: 2px 8px; border-radius: 4px; margin-right: 8px;">CIF Generation</span>
+        <span style="background: #f3f4f6; color: #374151; padding: 2px 8px; border-radius: 4px;">Dataset: MP-20</span>
+      </div>
+      <p style="margin-bottom: 1.2rem; font-size: 0.95rem;">
+        <strong>Goal:</strong> A dual-constraint task requiring the generated structure to satisfy both a specific chemical composition 
+        and a target crystallographic space group (e.g., <em>"Generate LiFePO4 in space group Pnma"</em>). This tests the model's 
+        geometric reasoning capabilities.
+      </p>
+
+      <h3 style="color: #2563eb; font-size: 1.1rem; margin-bottom: 0.5rem;">3. Space Group Classification</h3>
+      <div style="margin-bottom: 0.5rem; font-size: 0.85rem; color: #555;">
+        <span style="background: #fef3c7; color: #92400e; padding: 2px 8px; border-radius: 4px; margin-right: 8px;">Classification</span>
+        <span style="background: #f3f4f6; color: #374151; padding: 2px 8px; border-radius: 4px;">Dataset: MP-20</span>
+      </div>
+      <p style="margin-bottom: 1.2rem; font-size: 0.95rem;">
+        <strong>Goal:</strong> Analyze a provided crystal structure (lattice vectors and atomic sites) and accurately identify its 
+        International Union of Crystallography (IUCr) space group number (1-230) or symbol.
+      </p>
+
+      <h3 style="color: #2563eb; font-size: 1.1rem; margin-bottom: 0.5rem;">4. Band Gap Prediction</h3>
+      <div style="margin-bottom: 0.5rem; font-size: 0.85rem; color: #555;">
+        <span style="background: #dcfce7; color: #15803d; padding: 2px 8px; border-radius: 4px; margin-right: 8px;">Regression</span>
+        <span style="background: #f3f4f6; color: #374151; padding: 2px 8px; border-radius: 4px;">Dataset: MP-20</span>
+      </div>
+      <p style="margin-bottom: 1.2rem; font-size: 0.95rem;">
+        <strong>Goal:</strong> Predict the electronic band gap (in eV) given a crystal structure. This tests the model's predictive capabilities.
+      </p>
+
+      <h3 style="color: #2563eb; font-size: 1.1rem; margin-bottom: 0.5rem;">5. Formation Energy Prediction</h3>
+      <div style="margin-bottom: 0.5rem; font-size: 0.85rem; color: #555;">
+        <span style="background: #dcfce7; color: #15803d; padding: 2px 8px; border-radius: 4px; margin-right: 8px;">Regression</span>
+        <span style="background: #f3f4f6; color: #374151; padding: 2px 8px; border-radius: 4px;">Dataset: MP-20</span>
+      </div>
+      <p style="margin-bottom: 0.5rem; font-size: 0.95rem;">
+        <strong>Goal:</strong> Estimate the formation energy per atom for a given crystal structure, a fundamental metric for determining 
+        thermodynamic stability and synthesizability.
+      </p>
+    </div>
+  </section>
+
+  <section class="card">
+    <h2>Environment Usage</h2>
+    
+    <h3>Quickstart</h3>
+    <p>To run evaluations, you'll need to set up the server and then run the client evaluation script.</p>
+    
+    <p><strong>Step 2: Run Evaluation</strong></p>
+    <p>Run the evaluation using <code>vf-eval</code>. Select the appropriate task configuration:</p>
+    
+    <h4>Crystal Generation Task</h4>
+    <pre><code>uv run vf-eval crystal_generation \
+--num-examples 5 \
+--rollouts-per-example 3 \
+-m gpt-5 \
+--env-args='{"task":"symmetry-composition"}'</code></pre>
+
+    <h4>Classification Task</h4>
+    <pre><code>uv run vf-eval crystal_generation  \
+--num-examples 5 \
+--rollouts-per-example 3 \
+-m gpt-5 \
+--env-args='{"task":"band_gap"}'</code></pre>
+    <p><small><em>Note: Use <code>-a</code> or <code>--env-args</code> to pass specific configuration as a JSON object.</em></small></p>
+
+    <h3>Environment Arguments</h3>
+    <p>The following arguments can be passed via <code>--env-args</code> to customize the environment:</p>
+    <table>
+      <thead>
+        <tr>
+          <th>Arg</th>
+          <th>Type</th>
+          <th>Default</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><code>max_turns</code></td>
+          <td>int</td>
+          <td>1</td>
+          <td>Maximum number of refinement turns (1 for single-shot)</td>
+        </tr>
+        <tr>
+          <td><code>formation_energy_threshold</code></td>
+          <td>float</td>
+          <td>0.1</td>
+          <td>Maximum acceptable formation energy (eV/atom)</td>
+        </tr>
+    <h3>Metrics</h3>
+    <p>The environment emits the following metrics for tracking performance:</p>
+    <table>
+      <thead>
+        <tr>
+          <th>Metric</th>
+          <th>Meaning</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><code>reward</code></td>
+          <td>Main scalar reward (weighted sum of criteria)</td>
+        </tr>
+      </tbody>
+    </table>
+  </section>
+
+
+  <section class="card">
+    <h2>Use Cases</h2>
+    <ul>
+      <li>Comparing different LLMs on structured scientific reasoning</li>
+      <li>Tracking progress during fine-tuning or alignment experiments</li>
+      <li>Identifying failure modes in crystal or materials-related tasks</li>
+      <li>Serving as a lightweight benchmark for research iteration</li>
+    </ul>
+  </section>
+
+  <section class="card">
+    <h2>Why an Environment (Not Just a Dataset)?</h2>
+    <p>
+      By packaging these tasks as an environment, evaluation becomes:
+    </p>
+    <ul>
+      <li>Reproducible</li>
+      <li>Configurable</li>
+      <li>Comparable across models and runs</li>
+    </ul>
+    <p>
+      This makes it easier to integrate into automated evaluation pipelines and to track
+      longitudinal progress as models evolve.
+    </p>
+  </section>
+
+</main>
+
+<footer>
+  <p>
+    Built for evaluation and research purposes · Crystal Generation Environment · Prime Intellect
+  </p>
+</footer>
+
+<script>
+  const toggleSwitch = document.querySelector('.theme-switch input[type="checkbox"]');
+  const currentTheme = localStorage.getItem('theme');
+
+  if (currentTheme) {
+      document.documentElement.setAttribute('data-theme', currentTheme);
+      if (currentTheme === 'dark') {
+          toggleSwitch.checked = true;
+      }
+  }
+
+  function switchTheme(e) {
+      if (e.target.checked) {
+          document.documentElement.setAttribute('data-theme', 'dark');
+          localStorage.setItem('theme', 'dark');
+      } else {
+          document.documentElement.setAttribute('data-theme', 'light');
+          localStorage.setItem('theme', 'light');
+      }
+  }
+
+  toggleSwitch.addEventListener('change', switchTheme, false);
+</script>
+</body>
+</html>

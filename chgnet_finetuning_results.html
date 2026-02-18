@@ -1,0 +1,760 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CHGNet Fine-tuning Results | Hyperparameter Sweep</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .gradient-bg {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+        .metric-card {
+            transition: transform 0.2s;
+        }
+        .metric-card:hover {
+            transform: translateY(-4px);
+        }
+        table {
+            font-size: 0.875rem;
+        }
+    </style>
+</head>
+<body class="bg-gray-50 text-gray-900">
+
+    <header class="gradient-bg text-white py-12 shadow-lg">
+        <div class="max-w-6xl mx-auto px-6">
+            <a href="blog_post.html" class="text-white/80 hover:text-white text-sm mb-4 inline-block">← Back to Blog Post</a>
+            <h1 class="text-4xl md:text-5xl font-extrabold mb-4">
+                🔮 CHGNet Fine-tuning Results
+            </h1>
+            <p class="text-xl text-white/90">
+                Comprehensive hyperparameter sweep on MP-20 dataset subset
+            </p>
+        </div>
+    </header>
+
+    <main class="max-w-6xl mx-auto px-6 py-12">
+        
+        <!-- Introduction -->
+        <section class="mb-16">
+            <div class="bg-white rounded-lg shadow-md p-8">
+                <h2 class="text-3xl font-bold mb-6 text-gray-800">Overview</h2>
+                <p class="text-lg text-gray-700 mb-4">
+                    This page documents the systematic fine-tuning of CHGNet on a curated subset of the 
+                    <strong>Materials Project MP-20 dataset</strong>. We conducted a comprehensive hyperparameter 
+                    sweep to optimize model performance for predicting formation energies of stable crystal structures.
+                </p>
+                <div class="bg-blue-50 border-l-4 border-blue-500 p-4 rounded-r-lg">
+                    <p class="text-blue-900">
+                        <strong>🎯 Goal:</strong> Improve CHGNet's accuracy on thermodynamically stable materials 
+                        (formation energy < 0.1 eV/atom) through targeted fine-tuning and hyperparameter optimization.
+                    </p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Dataset Information -->
+        <section class="mb-16">
+            <div class="bg-white rounded-lg shadow-md p-8">
+                <h2 class="text-3xl font-bold mb-6 text-gray-800">Dataset</h2>
+                <div class="grid md:grid-cols-3 gap-6 mb-6">
+                    <div class="bg-indigo-50 rounded-lg p-6 metric-card">
+                        <div class="text-indigo-600 text-3xl font-bold mb-2">2,000</div>
+                        <div class="text-gray-700">Training Pool</div>
+                        <div class="text-sm text-gray-600 mt-2">Max structures available</div>
+                    </div>
+                    <div class="bg-green-50 rounded-lg p-6 metric-card">
+                        <div class="text-green-600 text-3xl font-bold mb-2">1,000</div>
+                        <div class="text-gray-700">Evaluation Set</div>
+                        <div class="text-sm text-gray-600 mt-2">Fixed test structures</div>
+                    </div>
+                    <div class="bg-purple-50 rounded-lg p-6 metric-card">
+                        <div class="text-purple-600 text-3xl font-bold mb-2">&lt; 0.1</div>
+                        <div class="text-gray-700">eV/atom</div>
+                        <div class="text-sm text-gray-600 mt-2">Formation energy filter</div>
+                    </div>
+                </div>
+                <p class="text-gray-700">
+                    <strong>Source:</strong> Materials Project mp-20 database, filtered for thermodynamically 
+                    stable compounds. All structures pre-processed with CHGNet force predictions for efficient 
+                    energy+force fine-tuning.
+                </p>
+            </div>
+        </section>
+
+        <!-- Hyperparameter Pool -->
+        <section class="mb-16">
+            <div class="bg-white rounded-lg shadow-md p-8">
+                <h2 class="text-3xl font-bold mb-6 text-gray-800">Hyperparameter Search Space</h2>
+                <p class="text-gray-700 mb-6">
+                    We conducted a <strong>grid search</strong> over the following parameter space, 
+                    resulting in <strong class="text-indigo-600">72 unique configurations</strong>:
+                </p>
+                
+                <div class="overflow-x-auto">
+                    <table class="w-full border-collapse">
+                        <thead>
+                            <tr class="bg-gray-100 border-b-2 border-gray-300">
+                                <th class="text-left py-3 px-4 font-semibold">Parameter</th>
+                                <th class="text-left py-3 px-4 font-semibold">Values Tested</th>
+                                <th class="text-left py-3 px-4 font-semibold">Rationale</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr class="border-b border-gray-200">
+                                <td class="py-3 px-4 font-medium">Training Samples</td>
+                                <td class="py-3 px-4"><code class="bg-gray-100 px-2 py-1 rounded">100, 250, 500, 1000, 1500, 2000</code></td>
+                                <td class="py-3 px-4 text-sm text-gray-600">Study sample efficiency and scaling behavior</td>
+                            </tr>
+                            <tr class="border-b border-gray-200 bg-gray-50">
+                                <td class="py-3 px-4 font-medium">Batch Size</td>
+                                <td class="py-3 px-4"><code class="bg-gray-100 px-2 py-1 rounded">8, 16</code></td>
+                                <td class="py-3 px-4 text-sm text-gray-600">Balance memory usage and training stability</td>
+                            </tr>
+                            <tr class="border-b border-gray-200">
+                                <td class="py-3 px-4 font-medium">Learning Rate</td>
+                                <td class="py-3 px-4"><code class="bg-gray-100 px-2 py-1 rounded">1e-3, 5e-3, 1e-2</code></td>
+                                <td class="py-3 px-4 text-sm text-gray-600">Find optimal adaptation rate for fine-tuning</td>
+                            </tr>
+                            <tr class="border-b border-gray-200 bg-gray-50">
+                                <td class="py-3 px-4 font-medium">Epochs</td>
+                                <td class="py-3 px-4"><code class="bg-gray-100 px-2 py-1 rounded">5, 10</code></td>
+                                <td class="py-3 px-4 text-sm text-gray-600">Avoid overfitting while ensuring convergence</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="mt-6 bg-yellow-50 border-l-4 border-yellow-500 p-4 rounded-r-lg">
+                    <p class="text-yellow-900 text-sm">
+                        <strong>⚙️ Fixed Parameters:</strong> Optimizer (Adam), Scheduler (Cosine Annealing), 
+                        Loss (MSE on energies + forces), Train/Val/Test split (90%/5%/5%)
+                    </p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Baseline Results -->
+        <section class="mb-16">
+            <div class="bg-white rounded-lg shadow-md p-8">
+                <h2 class="text-3xl font-bold mb-6 text-gray-800">Baseline Performance</h2>
+                <p class="text-gray-700 mb-6">
+                    Before fine-tuning, we evaluated the pretrained CHGNet model on our test set to establish a baseline:
+                </p>
+                
+                <div class="grid md:grid-cols-2 gap-6 mb-6">
+                    <div class="border-2 border-gray-300 rounded-lg p-6">
+                        <div class="text-sm text-gray-600 mb-2">Baseline R² Score</div>
+                        <div class="text-4xl font-bold text-gray-800">-25</div>
+                        <div class="text-xs text-gray-500 mt-1">(Estimated pretrained)</div>
+                    </div>
+                    <div class="border-2 border-gray-300 rounded-lg p-6">
+                        <div class="text-sm text-gray-600 mb-2">Baseline MAE</div>
+                        <div class="text-4xl font-bold text-gray-800">4.82 eV/atom</div>
+                        <div class="text-xs text-gray-500 mt-1">(Estimated pretrained)</div>
+                    </div>
+                </div>
+
+                <div class="bg-orange-50 border-l-4 border-orange-500 p-4 rounded-r-lg mb-6">
+                    <p class="text-orange-900 text-sm">
+                        <strong>⚠️ Note:</strong> The baseline model systematically <strong>underestimates formation energy</strong> 
+                        for this subset of thermodynamically stable materials. This is reflected in the poor R² score and large MAE, 
+                        indicating the pretrained CHGNet requires domain-specific fine-tuning for accurate predictions on structures 
+                        with formation energies near the stability threshold.
+                    </p>
+                </div>
+
+                <div class="bg-white border border-gray-200 rounded-lg p-4">
+                    <img src="chgnet_baseline_performance.png" 
+                         alt="Baseline Performance" 
+                         class="w-full max-w-2xl mx-auto rounded shadow">
+                    <p class="text-sm text-gray-600 text-center mt-3">
+                        Pretrained CHGNet predictions on MP-20 subset (no fine-tuning)
+                    </p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Fine-tuning Results -->
+        <section class="mb-16">
+            <div class="bg-white rounded-lg shadow-md p-8">
+                <h2 class="text-3xl font-bold mb-6 text-gray-800">Fine-tuning Results</h2>
+                
+                <div class="mb-8">
+                    <h3 class="text-xl font-semibold mb-4 text-gray-800">Key Findings</h3>
+                    <div class="space-y-4">
+                        <div class="bg-green-50 border-l-4 border-green-500 p-4 rounded-r-lg">
+                            <p class="text-green-900">
+                                <strong>✅ Best Performance:</strong> n=2000, batch=8, lr=0.01, epochs=10 achieved <strong>R²=0.9910</strong> and <strong>MAE=0.0676 eV/atom</strong> - a 98% improvement over baseline.
+                            </p>
+                        </div>
+                        <div class="bg-blue-50 border-l-4 border-blue-500 p-4 rounded-r-lg">
+                            <p class="text-blue-900">
+                                <strong>📈 Sample Efficiency:</strong> Performance scales consistently with dataset size. Even 1000 samples achieve R²>0.95 with optimal hyperparameters. Diminishing returns beyond 1500 samples for most configurations.
+                            </p>
+                        </div>
+                        <div class="bg-purple-50 border-l-4 border-purple-500 p-4 rounded-r-lg">
+                            <p class="text-purple-900">
+                                <strong>⚡ Learning Rate Sensitivity:</strong> lr=0.01 consistently outperforms lower rates. lr=0.001 requires significantly more samples (>1500) for convergence. Large datasets are more robust to LR variation.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mb-8">
+                    <h3 class="text-xl font-semibold mb-4 text-gray-800">Performance by Dataset Size</h3>
+                    <div class="bg-gray-50 rounded-lg p-6">
+                        <p class="text-sm text-gray-600 mb-4">
+                            Impact of training set size on test performance (averaged across hyperparameters):
+                        </p>
+                        <div class="overflow-x-auto">
+                            <table class="w-full border-collapse">
+                                <thead>
+                                    <tr class="bg-gray-200 border-b-2 border-gray-400">
+                                        <th class="py-2 px-4 text-left">Training Samples</th>
+                                        <th class="py-2 px-4 text-center">Avg R²</th>
+                                        <th class="py-2 px-4 text-center">Avg MAE</th>
+                                        <th class="py-2 px-4 text-center">Improvement</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr class="border-b border-gray-200">
+                                        <td class="py-2 px-4">100</td>
+                                        <td class="py-2 px-4 text-center">-4.99</td>
+                                        <td class="py-2 px-4 text-center">1.83 eV/atom</td>
+                                        <td class="py-2 px-4 text-center text-red-600">Poor</td>
+                                    </tr>
+                                    <tr class="border-b border-gray-200 bg-gray-50">
+                                        <td class="py-2 px-4">250</td>
+                                        <td class="py-2 px-4 text-center">-0.99</td>
+                                        <td class="py-2 px-4 text-center">0.96 eV/atom</td>
+                                        <td class="py-2 px-4 text-center text-orange-600">Marginal</td>
+                                    </tr>
+                                    <tr class="border-b border-gray-200">
+                                        <td class="py-2 px-4">500</td>
+                                        <td class="py-2 px-4 text-center">0.39</td>
+                                        <td class="py-2 px-4 text-center">0.55 eV/atom</td>
+                                        <td class="py-2 px-4 text-center text-yellow-600">Fair</td>
+                                    </tr>
+                                    <tr class="border-b border-gray-200 bg-gray-50">
+                                        <td class="py-2 px-4">1000</td>
+                                        <td class="py-2 px-4 text-center">0.57</td>
+                                        <td class="py-2 px-4 text-center">0.42 eV/atom</td>
+                                        <td class="py-2 px-4 text-center text-green-600">Good</td>
+                                    </tr>
+                                    <tr class="border-b border-gray-200">
+                                        <td class="py-2 px-4">1500</td>
+                                        <td class="py-2 px-4 text-center">0.79</td>
+                                        <td class="py-2 px-4 text-center">0.30 eV/atom</td>
+                                        <td class="py-2 px-4 text-center text-green-600">Excellent</td>
+                                    </tr>
+                                    <tr class="border-b border-gray-200 bg-gray-50 font-semibold">
+                                        <td class="py-2 px-4">2000</td>
+                                        <td class="py-2 px-4 text-center">0.87</td>
+                                        <td class="py-2 px-4 text-center">0.23 eV/atom</td>
+                                        <td class="py-2 px-4 text-center text-green-700">Best</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mb-8">
+                    <h3 class="text-xl font-semibold mb-4 text-gray-800">Top 5 Configurations</h3>
+                    <div class="overflow-x-auto">
+                        <table class="w-full border-collapse">
+                            <thead>
+                                <tr class="bg-indigo-100 border-b-2 border-indigo-400">
+                                    <th class="py-2 px-3 text-left">Rank</th>
+                                    <th class="py-2 px-3 text-center">Samples</th>
+                                    <th class="py-2 px-3 text-center">Batch</th>
+                                    <th class="py-2 px-3 text-center">LR</th>
+                                    <th class="py-2 px-3 text-center">Epochs</th>
+                                    <th class="py-2 px-3 text-center">R²</th>
+                                    <th class="py-2 px-3 text-center">MAE</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr class="border-b border-gray-200 bg-green-50">
+                                    <td class="py-2 px-3 font-bold">🥇 1</td>
+                                    <td class="py-2 px-3 text-center">2000</td>
+                                    <td class="py-2 px-3 text-center">8</td>
+                                    <td class="py-2 px-3 text-center">0.01</td>
+                                    <td class="py-2 px-3 text-center">10</td>
+                                    <td class="py-2 px-3 text-center font-semibold">0.9910</td>
+                                    <td class="py-2 px-3 text-center font-semibold">0.0676</td>
+                                </tr>
+                                <tr class="border-b border-gray-200">
+                                    <td class="py-2 px-3">🥈 2</td>
+                                    <td class="py-2 px-3 text-center">1500</td>
+                                    <td class="py-2 px-3 text-center">16</td>
+                                    <td class="py-2 px-3 text-center">0.01</td>
+                                    <td class="py-2 px-3 text-center">10</td>
+                                    <td class="py-2 px-3 text-center">0.9744</td>
+                                    <td class="py-2 px-3 text-center">0.1147</td>
+                                </tr>
+                                <tr class="border-b border-gray-200 bg-gray-50">
+                                    <td class="py-2 px-3">🥉 3</td>
+                                    <td class="py-2 px-3 text-center">2000</td>
+                                    <td class="py-2 px-3 text-center">8</td>
+                                    <td class="py-2 px-3 text-center">0.01</td>
+                                    <td class="py-2 px-3 text-center">5</td>
+                                    <td class="py-2 px-3 text-center">0.9731</td>
+                                    <td class="py-2 px-3 text-center">0.1199</td>
+                                </tr>
+                                <tr class="border-b border-gray-200">
+                                    <td class="py-2 px-3">4</td>
+                                    <td class="py-2 px-3 text-center">1500</td>
+                                    <td class="py-2 px-3 text-center">8</td>
+                                    <td class="py-2 px-3 text-center">0.01</td>
+                                    <td class="py-2 px-3 text-center">5</td>
+                                    <td class="py-2 px-3 text-center">0.9711</td>
+                                    <td class="py-2 px-3 text-center">0.1293</td>
+                                </tr>
+                                <tr class="border-b border-gray-200 bg-gray-50">
+                                    <td class="py-2 px-3">5</td>
+                                    <td class="py-2 px-3 text-center">1000</td>
+                                    <td class="py-2 px-3 text-center">16</td>
+                                    <td class="py-2 px-3 text-center">0.01</td>
+                                    <td class="py-2 px-3 text-center">10</td>
+                                    <td class="py-2 px-3 text-center">0.9688</td>
+                                    <td class="py-2 px-3 text-center">0.1242</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div class="mb-8">
+                    <h3 class="text-xl font-semibold mb-4 text-gray-800">Prediction Plots - Top Configurations</h3>
+                    <p class="text-sm text-gray-600 mb-6">
+                        Visual comparison of predicted vs. actual formation energies for the best performing models:
+                    </p>
+                    
+                    <!-- Rank 1: Best Overall -->
+                    <div class="bg-gradient-to-r from-green-50 to-emerald-50 border-2 border-green-400 rounded-lg p-6 mb-6">
+                        <div class="flex items-center mb-3">
+                            <span class="text-3xl mr-3">🥇</span>
+                            <div>
+                                <h4 class="text-lg font-bold text-green-900">Rank 1: Best Performance</h4>
+                                <p class="text-sm text-green-700">n=2000, batch=8, lr=0.01, epochs=10 | R²=0.9910, MAE=0.0676 eV/atom</p>
+                            </div>
+                        </div>
+                        <img src="sweep_results/n2000_bs8_lr0.01_ep10.png" 
+                             alt="Top Configuration" 
+                             class="w-full max-w-2xl mx-auto rounded shadow-lg">
+                    </div>
+
+                    <!-- Rank 2 -->
+                    <div class="bg-gray-50 border border-gray-300 rounded-lg p-6 mb-6">
+                        <div class="flex items-center mb-3">
+                            <span class="text-2xl mr-3">🥈</span>
+                            <div>
+                                <h4 class="text-lg font-semibold text-gray-800">Rank 2</h4>
+                                <p class="text-sm text-gray-600">n=1500, batch=16, lr=0.01, epochs=10 | R²=0.9744, MAE=0.1147 eV/atom</p>
+                            </div>
+                        </div>
+                        <img src="sweep_results/n1500_bs16_lr0.01_ep10.png" 
+                             alt="Rank 2 Configuration" 
+                             class="w-full max-w-2xl mx-auto rounded shadow">
+                    </div>
+
+                    <!-- Rank 3 -->
+                    <div class="bg-gray-50 border border-gray-300 rounded-lg p-6 mb-6">
+                        <div class="flex items-center mb-3">
+                            <span class="text-2xl mr-3">🥉</span>
+                            <div>
+                                <h4 class="text-lg font-semibold text-gray-800">Rank 3</h4>
+                                <p class="text-sm text-gray-600">n=2000, batch=8, lr=0.01, epochs=5 | R²=0.9731, MAE=0.1199 eV/atom</p>
+                            </div>
+                        </div>
+                        <img src="sweep_results/n2000_bs8_lr0.01_ep5.png" 
+                             alt="Rank 3 Configuration" 
+                             class="w-full max-w-2xl mx-auto rounded shadow">
+                    </div>
+
+                    <!-- Rank 4 & 5 in grid -->
+                    <div class="grid md:grid-cols-2 gap-6">
+                        <div class="bg-gray-50 border border-gray-300 rounded-lg p-4">
+                            <div class="mb-2">
+                                <h4 class="text-base font-semibold text-gray-800">Rank 4</h4>
+                                <p class="text-xs text-gray-600">n=1500, batch=8, lr=0.01, epochs=5</p>
+                                <p class="text-xs text-gray-600">R²=0.9711, MAE=0.1293 eV/atom</p>
+                            </div>
+                            <img src="sweep_results/n1500_bs8_lr0.01_ep5.png" 
+                                 alt="Rank 4 Configuration" 
+                                 class="w-full rounded shadow">
+                        </div>
+                        <div class="bg-gray-50 border border-gray-300 rounded-lg p-4">
+                            <div class="mb-2">
+                                <h4 class="text-base font-semibold text-gray-800">Rank 5</h4>
+                                <p class="text-xs text-gray-600">n=1000, batch=16, lr=0.01, epochs=10</p>
+                                <p class="text-xs text-gray-600">R²=0.9688, MAE=0.1242 eV/atom</p>
+                            </div>
+                            <img src="sweep_results/n1000_bs16_lr0.01_ep10.png" 
+                                 alt="Rank 5 Configuration" 
+                                 class="w-full rounded shadow">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-indigo-50 border border-indigo-200 rounded-lg p-6">
+                    <h4 class="font-semibold text-indigo-900 mb-3">📊 WandB Dashboard</h4>
+                    <p class="text-indigo-800 mb-3">
+                        All 72 experiments are tracked in Weights & Biases. View the complete sweep results, 
+                        parallel coordinates plots, and detailed metrics:
+                    </p>
+                    <a href="#" class="inline-block bg-indigo-600 text-white px-6 py-2 rounded-lg hover:bg-indigo-700 transition">
+                        View Complete Results on WandB →
+                    </a>
+                </div>
+            </div>
+        </section>
+
+        <!-- Training Dynamics -->
+        <section class="mb-16">
+            <div class="bg-white rounded-lg shadow-md p-8">
+                <h2 class="text-3xl font-bold mb-6 text-gray-800">📈 Training Dynamics</h2>
+                <p class="text-gray-700 mb-6">
+                    Analysis of training curves across all 72 configurations reveals key patterns in convergence behavior, 
+                    learning rate sensitivity, and sample efficiency. These insights help identify underfitting, overfitting, 
+                    and optimal training regimes.
+                </p>
+
+                <!-- Top 5 Training Curves -->
+                <div class="mb-8">
+                    <h3 class="text-xl font-semibold mb-4 text-gray-800">Top 5 Configurations - Convergence</h3>
+                    <div class="bg-white border border-gray-200 rounded-lg p-4">
+                        <img src="training_curves/top5_curves.png" 
+                             alt="Top 5 Training Curves" 
+                             class="w-full max-w-4xl mx-auto rounded shadow">
+                        <p class="text-sm text-gray-600 text-center mt-3">
+                            <strong>Top panel:</strong> Energy MAE progression. <strong>Bottom panel:</strong> Force MAE progression. 
+                            All top 5 configurations converge rapidly within 5-10 epochs for both objectives.
+                        </p>
+                    </div>
+                </div>
+
+                <!-- Best per size comparison -->
+                <div class="mb-8">
+                    <h3 class="text-xl font-semibold mb-4 text-gray-800">Sample Size Impact on Training</h3>
+                    
+                    <!-- Energy MAE -->
+                    <div class="bg-white border border-gray-200 rounded-lg p-4 mb-4">
+                        <h4 class="text-base font-semibold text-gray-700 mb-2">Energy MAE</h4>
+                        <img src="training_curves/best_per_size_energy.png" 
+                             alt="Best Configuration per Dataset Size - Energy" 
+                             class="w-full max-w-4xl mx-auto rounded shadow">
+                        <p class="text-sm text-gray-600 text-center mt-3">
+                            Best performing configuration for each dataset size (energy predictions). Larger datasets achieve 
+                            lower validation MAE and show smoother convergence.
+                        </p>
+                    </div>
+                    
+                    <!-- Force MAE -->
+                    <div class="bg-white border border-gray-200 rounded-lg p-4">
+                        <h4 class="text-base font-semibold text-gray-700 mb-2">Force MAE</h4>
+                        <img src="training_curves/best_per_size_force.png" 
+                             alt="Best Configuration per Dataset Size - Forces" 
+                             class="w-full max-w-4xl mx-auto rounded shadow">
+                        <p class="text-sm text-gray-600 text-center mt-3">
+                            Force prediction accuracy improves significantly with dataset size. Force MAE shows more 
+                            variability during training compared to energy MAE.
+                        </p>
+                    </div>
+                </div>
+
+                <!-- Learning Rate Comparison -->
+                <div class="mb-8">
+                    <h3 class="text-xl font-semibold mb-4 text-gray-800">Learning Rate Sensitivity (n=2000)</h3>
+                    <div class="bg-white border border-gray-200 rounded-lg p-4">
+                        <img src="training_curves/lr_comparison.png" 
+                             alt="Learning Rate Impact" 
+                             class="w-full max-w-5xl mx-auto rounded shadow">
+                        <p class="text-sm text-gray-600 text-center mt-3">
+                            Training dynamics across learning rates for the largest dataset (2000 samples). 
+                            <strong>Top row:</strong> Energy MAE convergence. <strong>Bottom row:</strong> Force MAE convergence.
+                            <strong>lr=0.01</strong> shows fastest and most stable convergence for both metrics.
+                        </p>
+                    </div>
+                </div>
+
+                <!-- Key Observations -->
+                <div class="bg-gradient-to-r from-blue-50 to-indigo-50 border-l-4 border-blue-500 p-6 rounded-r-lg">
+                    <h4 class="font-bold text-blue-900 mb-3">🔍 Key Observations</h4>
+                    <div class="space-y-3 text-blue-900">
+                        <div class="flex items-start">
+                            <span class="mr-2">•</span>
+                            <p class="text-sm"><strong>Underfitting:</strong> 100-250 sample configs show high final energy MAE (>1.0 eV/atom) 
+                            even after convergence, indicating insufficient training data.</p>
+                        </div>
+                        <div class="flex items-start">
+                            <span class="mr-2">•</span>
+                            <p class="text-sm"><strong>Rapid Convergence:</strong> Optimal configs (lr=0.01) achieve 80-90% of final 
+                            performance within first 3 epochs for both energy and force predictions. Marginal improvements after epoch 5.</p>
+                        </div>
+                        <div class="flex items-start">
+                            <span class="mr-2">•</span>
+                            <p class="text-sm"><strong>Learning Rate Impact:</strong> lr=0.001 shows very slow convergence across all 
+                            dataset sizes. lr=0.01 optimal for fast adaptation without instability for both objectives.</p>
+                        </div>
+                        <div class="flex items-start">
+                            <span class="mr-2">•</span>
+                            <p class="text-sm"><strong>No Overfitting:</strong> Both energy and force validation MAE continue decreasing or plateau - 
+                            no evidence of increasing validation error even at 10 epochs.</p>
+                        </div>
+                        <div class="flex items-start">
+                            <span class="mr-2">•</span>
+                            <p class="text-sm"><strong>Force vs Energy:</strong> Force MAE shows more training variability but converges to 
+                            similar quality as energy predictions with sufficient data (n≥1500).</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Detailed plots by size -->
+                <div class="mt-8 bg-gray-50 border border-gray-200 rounded-lg p-6">
+                    <h4 class="font-semibold text-gray-800 mb-3">📁 Detailed Training Curves by Dataset Size</h4>
+                    <p class="text-sm text-gray-700 mb-4">
+                        Individual plots showing all hyperparameter combinations for each dataset size. 
+                        Each size has separate plots for <strong>energy MAE</strong> and <strong>force MAE</strong>:
+                    </p>
+                    <div class="space-y-3">
+                        <div>
+                            <h5 class="text-sm font-semibold text-gray-700 mb-2">Energy MAE Training Curves</h5>
+                            <div class="grid grid-cols-2 md:grid-cols-3 gap-3 text-sm mb-4">
+                                <a href="training_curves/energy_by_size_n100.png" target="_blank" 
+                                   class="text-indigo-600 hover:text-indigo-800 hover:underline">
+                                    📈 n=100 samples (14 configs)
+                                </a>
+                                <a href="training_curves/energy_by_size_n250.png" target="_blank" 
+                                   class="text-indigo-600 hover:text-indigo-800 hover:underline">
+                                    📈 n=250 samples (12 configs)
+                                </a>
+                                <a href="training_curves/energy_by_size_n500.png" target="_blank" 
+                                   class="text-indigo-600 hover:text-indigo-800 hover:underline">
+                                    📈 n=500 samples (12 configs)
+                                </a>
+                                <a href="training_curves/energy_by_size_n1000.png" target="_blank" 
+                                   class="text-indigo-600 hover:text-indigo-800 hover:underline">
+                                    📈 n=1000 samples (12 configs)
+                                </a>
+                                <a href="training_curves/energy_by_size_n1500.png" target="_blank" 
+                                   class="text-indigo-600 hover:text-indigo-800 hover:underline">
+                                    📈 n=1500 samples (12 configs)
+                                </a>
+                                <a href="training_curves/energy_by_size_n2000.png" target="_blank" 
+                                   class="text-indigo-600 hover:text-indigo-800 hover:underline">
+                                    📈 n=2000 samples (12 configs)
+                                </a>
+                            </div>
+                        </div>
+                        <div>
+                            <h5 class="text-sm font-semibold text-gray-700 mb-2">Force MAE Training Curves</h5>
+                            <div class="grid grid-cols-2 md:grid-cols-3 gap-3 text-sm">
+                                <a href="training_curves/force_by_size_n100.png" target="_blank" 
+                                   class="text-purple-600 hover:text-purple-800 hover:underline">
+                                    ⚡ n=100 samples (14 configs)
+                                </a>
+                                <a href="training_curves/force_by_size_n250.png" target="_blank" 
+                                   class="text-purple-600 hover:text-purple-800 hover:underline">
+                                    ⚡ n=250 samples (12 configs)
+                                </a>
+                                <a href="training_curves/force_by_size_n500.png" target="_blank" 
+                                   class="text-purple-600 hover:text-purple-800 hover:underline">
+                                    ⚡ n=500 samples (12 configs)
+                                </a>
+                                <a href="training_curves/force_by_size_n1000.png" target="_blank" 
+                                   class="text-purple-600 hover:text-purple-800 hover:underline">
+                                    ⚡ n=1000 samples (12 configs)
+                                </a>
+                                <a href="training_curves/force_by_size_n1500.png" target="_blank" 
+                                   class="text-purple-600 hover:text-purple-800 hover:underline">
+                                    ⚡ n=1500 samples (12 configs)
+                                </a>
+                                <a href="training_curves/force_by_size_n2000.png" target="_blank" 
+                                   class="text-purple-600 hover:text-purple-800 hover:underline">
+                                    ⚡ n=2000 samples (12 configs)
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Replication Script -->
+        <section class="mb-16">
+            <div class="bg-white rounded-lg shadow-md p-8">
+                <h2 class="text-3xl font-bold mb-6 text-gray-800">🔬 Replication Guide</h2>
+                <p class="text-gray-700 mb-6">
+                    The complete hyperparameter sweep can be reproduced using the following script. 
+                    Ensure you have an active Weights & Biases account and a Materials Project API key.
+                </p>
+
+                <div class="bg-yellow-50 border-l-4 border-yellow-500 p-4 rounded-r-lg mb-6">
+                    <p class="text-yellow-900 text-sm">
+                        <strong>⚠️ Prerequisites:</strong> Install required packages: 
+                        <code class="bg-yellow-100 px-2 py-1 rounded">pip install chgnet wandb pymatgen datasets scikit-learn</code>
+                    </p>
+                </div>
+
+                <div class="bg-gray-900 text-gray-100 rounded-lg overflow-hidden">
+                    <div class="bg-gray-800 px-4 py-2 flex justify-between items-center">
+                        <span class="text-sm font-mono">chgnet_finetuning.py</span>
+                        <span class="text-xs text-gray-400">Python</span>
+                    </div>
+                    <pre class="p-6 overflow-x-auto text-sm"><code># ============================================================
+# Fine-tuning CHGNet on a Subset of MP20 Dataset with Hyperparameter Sweep
+# ============================================================
+
+import os
+import numpy as np
+import matplotlib
+matplotlib.use('Agg')  # Use non-interactive backend for thread safety
+import matplotlib.pyplot as plt
+from tqdm import tqdm
+from datasets import Dataset
+from pymatgen.core import Structure
+from pymatgen.ext.matproj import MPRester
+from chgnet.data.dataset import StructureData, get_train_val_test_loader
+from chgnet.model import CHGNet
+from chgnet.trainer import Trainer
+from sklearn.metrics import r2_score
+import torch
+import wandb
+from pathlib import Path
+
+# ============================================================
+# Configuration
+# ============================================================
+
+MP_API_KEY = os.getenv("MP_API_KEY")  # Set as environment variable
+DATASET_PATH = "mp_20.json"  # Path to your MP20 dataset
+N_TEST_SAMPLES = 1000
+OUTPUT_DIR = Path("sweep_results")
+OUTPUT_DIR.mkdir(exist_ok=True)
+
+# Sweep configuration
+SWEEP_CONFIG = {
+    "method": "grid",
+    "metric": {"name": "val_mae", "goal": "minimize"},
+    "parameters": {
+        "n_train_samples": {"values": [100, 250, 500, 1000, 1500, 2000]},
+        "batch_size": {"values": [8, 16]},
+        "learning_rate": {"values": [1e-3, 5e-3, 1e-2]},
+        "epochs": {"values": [5, 10]},
+    }
+}
+
+# ============================================================
+# Utility Functions
+# ============================================================
+
+def get_structure_from_mp_id(mp_id: str) -> Structure | None:
+    """Fetches structure from Materials Project using MPRester."""
+    try:
+        with MPRester(api_key=MP_API_KEY) as mpr:
+            return mpr.get_structure_by_material_id(mp_id)
+    except Exception as e:
+        print(f"❌ Could not fetch structure for {mp_id}: {e}")
+        return None
+
+def energy_per_atom_fn(model):
+    """Returns a closure to compute predicted energy per atom."""
+    def _energy_per_atom(structure):
+        try:
+            return model.predict_structure(structure)["e"]
+        except Exception as e:
+            return np.nan
+    return _energy_per_atom
+
+# ... [Full script continues - see GitHub repository]
+
+# ============================================================
+# Main Execution
+# ============================================================
+
+if __name__ == "__main__":
+    wandb.login()
+    
+    # Prepare data once
+    dataset = Dataset.from_json(DATASET_PATH)
+    base_model = CHGNet.load()
+    
+    MAX_SAMPLES = 2000
+    PREPARED_STRUCTURES, PREPARED_ENERGIES, PREPARED_FORCES = prepare_max_training_data(
+        dataset, MAX_SAMPLES, base_model
+    )
+    
+    EVAL_STRUCTURES, EVAL_GROUND_TRUTH = prepare_eval_data(dataset, N_TEST_SAMPLES)
+    
+    # Create and run sweep
+    sweep_id = wandb.sweep(SWEEP_CONFIG, project="chgnet-finetuning-sweep")
+    wandb.agent(sweep_id, train_with_config, count=None)
+    
+    print("🎉 Sweep completed!")</code></pre>
+                </div>
+
+                <div class="mt-6 bg-gray-100 rounded-lg p-4">
+                    <p class="text-sm text-gray-700 mb-2">
+                        <strong>📥 Download:</strong> The complete script with all helper functions is available on GitHub.
+                    </p>
+                    <a href="#" class="text-indigo-600 hover:text-indigo-800 text-sm font-medium">
+                        View full script on GitHub →
+                    </a>
+                </div>
+            </div>
+        </section>
+
+        <!-- Lessons Learned -->
+        <section class="mb-16">
+            <div class="bg-white rounded-lg shadow-md p-8">
+                <h2 class="text-3xl font-bold mb-6 text-gray-800">💡 Lessons Learned</h2>
+                <div class="space-y-4">
+                    <div class="border-l-4 border-blue-500 pl-4">
+                        <h3 class="font-semibold text-gray-800 mb-2">Data Preparation is Critical</h3>
+                        <p class="text-gray-700 text-sm">
+                            Pre-computing all structures, energies, and forces once saved hours of redundant 
+                            API calls and force calculations across the 72 experiments.
+                        </p>
+                    </div>
+                    <div class="border-l-4 border-green-500 pl-4">
+                        <h3 class="font-semibold text-gray-800 mb-2">Sample Efficiency</h3>
+                        <p class="text-gray-700 text-sm">
+                            Strong performance is achievable with 1000-1500 samples when paired with optimal hyperparameters 
+                            (R² > 0.96). Beyond 1500 samples, improvements become marginal. For resource-constrained scenarios, 
+                            1000 samples + lr=0.01 provides excellent cost-effectiveness.
+                        </p>
+                    </div>
+                    <div class="border-l-4 border-purple-500 pl-4">
+                        <h3 class="font-semibold text-gray-800 mb-2">Hyperparameter Interactions</h3>
+                        <p class="text-gray-700 text-sm">
+                            Learning rate dominates performance: lr=0.01 consistently outperforms lr=0.001 across all dataset sizes. 
+                            Batch size shows minimal impact at large sample counts (1500+), but bs=8 slightly edges out bs=16. 
+                            Doubling epochs (5→10) provides meaningful gains for larger datasets but risks overfitting on small ones.
+                        </p>
+                    </div>
+                    <div class="border-l-4 border-orange-500 pl-4">
+                        <h3 class="font-semibold text-gray-800 mb-2">Thread Safety</h3>
+                        <p class="text-gray-700 text-sm">
+                            Using matplotlib's Agg backend was essential to avoid GUI thread conflicts during 
+                            parallel sweep execution.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <footer class="bg-gray-800 text-white py-8">
+        <div class="max-w-6xl mx-auto px-6 text-center">
+            <p class="mb-2">CHGNet Fine-tuning Experiments | February 2026</p>
+            <a href="blog_post.html" class="text-blue-400 hover:text-blue-300">← Back to Main Blog Post</a>
+        </div>
+    </footer>
+
+</body>
+</html>

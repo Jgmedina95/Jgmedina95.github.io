@@ -1,0 +1,1063 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI for Materials: Crystal Relaxation RL Environment</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+        }
+    </script>
+    <style>
+        /* Custom styles for the energy landscape vibes */
+        .gradient-text {
+            background: linear-gradient(90deg, #4f46e5, #06b6d4);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        
+        /* Tab styles */
+        .tab-button {
+            padding: 0.75rem 1.5rem;
+            border-bottom: 3px solid transparent;
+            transition: all 0.2s;
+            cursor: pointer;
+        }
+        .tab-button.active {
+            border-bottom-color: #4f46e5;
+            color: #4f46e5;
+            font-weight: 600;
+        }
+        .tab-button:hover {
+            background-color: #f3f4f6;
+        }
+        html.dark .tab-button.active {
+            color: #818cf8;
+            border-bottom-color: #818cf8;
+        }
+        html.dark .tab-button:hover {
+            background-color: #1f2937;
+        }
+        
+        .tab-content {
+            display: none;
+        }
+        .tab-content.active {
+            display: block;
+        }
+
+        /* Toggle Switch */
+        .theme-switch { display: inline-block; height: 24px; position: relative; width: 44px; margin-right: 1rem; }
+        .theme-switch input { display:none; }
+        .slider { background-color: #ccc; bottom: 0; cursor: pointer; left: 0; position: absolute; right: 0; top: 0; transition: .4s; border-radius: 34px; }
+        .slider:before { background-color: #fff; bottom: 3px; content: ""; height: 18px; left: 3px; position: absolute; transition: .4s; width: 18px; border-radius: 50%; }
+        input:checked + .slider { background-color: #4f46e5; }
+        input:checked + .slider:before { transform: translateX(20px); }
+    </style>
+</head>
+<body class="bg-gray-50 text-gray-900 font-sans leading-relaxed dark:bg-gray-900 dark:text-gray-100 transition-colors duration-200">
+
+    <header class="bg-white border-b sticky top-0 z-50 dark:bg-gray-900 dark:border-gray-800 transition-colors duration-200">
+        <div class="max-w-4xl mx-auto px-4 py-4 flex justify-between items-center">
+            <span class="font-bold text-xl tracking-tight dark:text-white">RL Crystal Generation</span>
+            <div class="flex items-center">
+                <label class="theme-switch" aria-label="Toggle Dark Mode">
+                    <input type="checkbox" id="theme-toggle" />
+                    <span class="slider"></span>
+                </label>
+                <a href="https://app.primeintellect.ai/dashboard/environments/jmedina9/crystal_relaxation" 
+                   class="bg-indigo-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-indigo-700 transition">
+                   View on Prime Intellect
+                </a>
+            </div>
+        </div>
+    </header>
+
+    <main class="max-w-3xl mx-auto px-6 py-12">
+        
+        <header class="mb-12">
+            <h1 class="text-4xl md:text-5xl font-extrabold mb-6 leading-tight">
+                Reinforcement Learning for Crystal Relaxation
+            </h1>
+            <div class="flex items-center text-gray-500 text-sm">
+                <span>By jmedina9</span>
+                <span class="mx-2">•</span>
+                <span>5 min read</span>
+                <span class="mx-2">•</span>
+                <span class="bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded">RL Environments</span>
+            </div>
+        </header>
+
+        <section class="prose prose-indigo lg:prose-xl dark:prose-invert">
+            <p class="text-lg text-gray-700 dark:text-gray-300 mb-6">
+                Finding the stable state of a crystal—a process known as <strong>relaxation</strong>—is the bedrock of modern materials science. 
+                But it’s also a massive computational bottleneck. Today, I'm introducing a new Reinforcement Learning environment 
+                designed to teach agents how to find energy minima autonomously.
+            </p>
+
+            <h2 class="text-2xl font-bold mt-10 mb-4">The Challenge: The Energy Landscape</h2>
+            <p class="mb-6">
+                In a typical relaxation task, we adjust atomic coordinates until the forces reach zero. 
+                Traditional methods like are precise but slow. By framing this as a 
+                <strong>Markov Decision Process (MDP)</strong>, we can train agents to navigate these complex 
+                potential energy surfaces (PES) with much higher efficiency.
+            </p>
+
+            <div class="bg-indigo-50 dark:bg-indigo-900/20 border-l-4 border-indigo-500 p-6 my-8 rounded-r-lg">
+                <h3 class="text-indigo-800 dark:text-indigo-200 font-bold mb-2">Environment Highlights:</h3>
+                <ul class="list-disc list-inside text-indigo-900 dark:text-indigo-100 space-y-2">
+                    <li><strong>State Space:</strong> 3D coordinates and lattice parameters from the Materials Project.</li>
+                    <li><strong>Action Space:</strong> Atomic displacements and lattice strain tensors.</li>
+                    <li><strong>Reward:</strong> Energy reduction verified by the Prime Intellect <code>verifiers</code> library.</li>
+                </ul>
+            </div>
+
+            <h2 class="text-2xl font-bold mt-10 mb-4">The Dataset</h2>
+            <p class="mb-6">
+                The training environment uses a carefully curated subset of the <strong>Materials Project mp-20</strong> 
+                dataset. To ensure the agent focuses on stable materials, I filtered the collection to include only 
+                structures with an original formation energy below 0.1 eV/atom. This subset provides a challenging 
+                yet realistic set of crystal structures for the agent to learn from. 
+                
+                https://github.com/microsoft/mattergen/tree/main/data-release
+            </p>
+
+            <h2 class="text-2xl font-bold mt-10 mb-4">🔮 The Model: Fine-tuned CHGNet</h2>
+            
+            <!-- Tabs -->
+            <div class="border-b border-gray-200 dark:border-gray-700 mb-6">
+                <div class="flex space-x-1">
+                    <button class="tab-button active" onclick="switchTab(event, 'overview')">Overview</button>
+                    <button class="tab-button" onclick="switchTab(event, 'code')">Code Implementation</button>
+                </div>
+            </div>
+            
+            <!-- Overview Tab -->
+            <div id="overview" class="tab-content active">
+                <p class="mb-4">
+                    At the heart of this environment is <strong>CHGNet</strong> (Crystal Hamiltonian Graph Neural Network), 
+                    a universal machine learning potential pretrained on the Materials Project database. CHGNet predicts 
+                    energies, forces, and stresses for any atomic configuration—making it ideal for rapid energy evaluations 
+                    during RL training.
+                </p>
+                <p class="mb-6">
+                    To improve accuracy on my specific dataset, I fine-tuned the pretrained CHGNet model using the following setup:
+                </p>
+                <div class="bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 p-6 rounded-lg mb-6">
+                    <h3 class="font-bold text-gray-800 dark:text-gray-200 mb-3">Fine-tuning Configuration:</h3>
+                    <ul class="text-gray-700 dark:text-gray-300 space-y-2">
+                        <li><strong>Training samples:</strong> 2000 structures from the filtered mp-20 subset</li>
+                        <li><strong>Targets:</strong> Formation energy per atom + atomic forces</li>
+                        <li><strong>Batch size:</strong> 8</li>
+                        <li><strong>Epochs:</strong> 10</li>
+                        <li><strong>Optimizer:</strong> Adam with learning rate 1e-2</li>
+                        <li><strong>Loss function:</strong> Mean Squared Error (MSE)</li>
+                        <li><strong>Scheduler:</strong> Cosine annealing learning rate</li>
+                        <li><strong>Train/Val/Test split:</strong> 90% / 5% / 5%</li>
+                    </ul>
+                </div>
+                <p class="mb-6">
+                    This fine-tuning process allows the model to better capture the energy landscape of thermodynamically 
+                    stable materials, providing more accurate reward signals for the RL agent during training.
+                </p>
+                
+                <div class="bg-indigo-100 dark:bg-indigo-900/40 border border-indigo-300 dark:border-indigo-700 rounded-lg p-4 mt-6">
+                    <p class="text-indigo-900 dark:text-indigo-100 text-sm font-semibold mb-2">
+                        🔬 Curious about the optimal hyperparameters?
+                    </p>
+                    <p class="text-indigo-800 dark:text-indigo-200 text-sm mb-3">
+                        We tested 72 different configurations to find the best setup. 
+                        <a href="chgnet_finetuning_results.html" class="underline font-semibold hover:text-indigo-600 dark:hover:text-indigo-400">
+                            View the complete hyperparameter sweep results →
+                        </a>
+                    </p>
+                </div>
+            </div>
+            
+            <!-- Code Tab -->
+            <div id="code" class="tab-content">
+                <p class="text-gray-600 mb-4">
+                    Below is the complete fine-tuning pipeline showing how CHGNet is trained on the MP20 subset.
+                </p>
+                
+                <h3 class="text-lg font-bold mt-6 mb-3">1. Configuration & Imports</h3>
+                <pre class="bg-gray-900 text-gray-100 p-4 rounded-lg overflow-x-auto text-sm mb-6"><code>import numpy as np
+from datasets import Dataset
+from pymatgen.core import Structure
+from pymatgen.ext.matproj import MPRester
+from chgnet.data.dataset import StructureData, get_train_val_test_loader
+from chgnet.model import CHGNet
+from chgnet.trainer import Trainer
+
+# Configuration
+MP_API_KEY = os.getenv("MP_API_KEY")
+DATASET_PATH = "mp_20.json"
+N_TRAIN_SAMPLES = 2000 # Real challenge (use 500 for medium)
+BATCH_SIZE = 8
+EPOCHS = 10 # Real challenge (use 5 for medium)
+LEARNING_RATE = 1e-2</code></pre>
+
+                <h3 class="text-lg font-bold mt-6 mb-3">2. Data Preparation</h3>
+                <pre class="bg-gray-900 text-gray-100 p-4 rounded-lg overflow-x-auto text-sm mb-6"><code># Load dataset and sample
+dataset = Dataset.from_json(DATASET_PATH)
+subset = dataset.select(np.random.choice(len(dataset), N_TRAIN_SAMPLES, replace=False))
+
+structures, energies_per_atom, forces = [], [], []
+base_model = CHGNet.load()  # Load pretrained model
+
+# Fetch structures and prepare training data
+for data in tqdm(subset, desc="Preparing data"):
+    structure = get_structure_from_mp_id(data["id"])
+    if isinstance(structure, Structure):
+        structures.append(structure)
+        energies_per_atom.append(data["formation_energy_per_atom"])
+        forces.append(base_model.predict_structure(structure)["f"])</code></pre>
+
+                <h3 class="text-lg font-bold mt-6 mb-3">3. Create DataLoaders</h3>
+                <pre class="bg-gray-900 text-gray-100 p-4 rounded-lg overflow-x-auto text-sm mb-6"><code>chgnet_dataset = StructureData(
+    structures=structures,
+    energies=energies_per_atom,
+    forces=forces,
+)
+train_loader, val_loader, test_loader = get_train_val_test_loader(
+    chgnet_dataset, 
+    batch_size=BATCH_SIZE, 
+    train_ratio=0.9, 
+    val_ratio=0.05
+)</code></pre>
+
+                <h3 class="text-lg font-bold mt-6 mb-3">4. Fine-tune the Model</h3>
+                <pre class="bg-gray-900 text-gray-100 p-4 rounded-lg overflow-x-auto text-sm mb-6"><code>trainer = Trainer(
+    model=base_model,
+    targets="ef",  # energy + forces
+    optimizer="Adam",
+    scheduler="CosLR",
+    criterion="MSE",
+    epochs=EPOCHS,
+    learning_rate=LEARNING_RATE,
+    use_device="cpu",
+    print_freq=6,
+)
+
+trainer.train(train_loader, val_loader, test_loader)
+fine_tuned_model = trainer.model
+
+# Save the fine-tuned model
+torch.save(trainer.best_model.state_dict(), "fine_tuned_chgnet_model.pth")</code></pre>
+
+                <h3 class="text-lg font-bold mt-6 mb-3">5. Evaluation</h3>
+                <pre class="bg-gray-900 text-gray-100 p-4 rounded-lg overflow-x-auto text-sm mb-6"><code># Evaluate on test set
+y_true, y_pred = [], []
+for data in sample_eval:
+    structure = get_structure_from_mp_id(data["id"])
+    if isinstance(structure, Structure):
+        y_true.append(data["formation_energy_per_atom"])
+        y_pred.append(fine_tuned_model.predict_structure(structure)["e"])
+
+# Compute metrics
+r2 = r2_score(y_true, y_pred)
+mae = np.mean(np.abs(np.array(y_true) - np.array(y_pred)))
+print(f"R² score: {r2:.4f}, MAE: {mae:.4f} eV/atom")</code></pre>
+
+                <div class="bg-blue-50 border-l-4 border-blue-500 p-4 mt-6">
+                    <p class="text-blue-800 text-sm">
+                        <strong>💡 Note:</strong> This training pipeline takes ~15-20 minutes on CPU. 
+                        For production use, consider GPU acceleration and larger training sets.
+                    </p>
+                </div>
+
+                <h3 class="text-lg font-bold mt-8 mb-3">6. Results Visualization</h3>
+                <p class="text-gray-600 dark:text-gray-400 mb-4">
+                    We compare the model's predictions before and after fine-tuning to demonstrate the improvement:
+                </p>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                    <div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-4">
+                        <img src="chgnet_baseline_performance.png" 
+                             alt="CHGNet Baseline Performance" 
+                             class="w-full h-auto rounded shadow-lg">
+                        <p class="text-sm text-gray-700 dark:text-gray-300 font-semibold text-center mt-3">Before Fine-tuning</p>
+                        <p class="text-xs text-gray-600 dark:text-gray-400 text-center">Pretrained CHGNet baseline</p>
+                    </div>
+                    <div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-4">
+                        <img src="chgnet_finetuning_performance.png" 
+                             alt="CHGNet Fine-tuning Performance" 
+                             class="w-full h-auto rounded shadow-lg">
+                        <p class="text-sm text-gray-700 dark:text-gray-300 font-semibold text-center mt-3">After Fine-tuning</p>
+                        <p class="text-xs text-gray-600 dark:text-gray-400 text-center">Fine-tuned on 2000 MP20 structures (Real Challenge)</p>
+                    </div>
+                </div>
+                <p class="text-sm text-gray-600 dark:text-gray-400 text-center">
+                    Side-by-side comparison showing improved accuracy after fine-tuning on the filtered MP20 subset.
+                </p>
+
+                <div class="bg-gradient-to-r from-indigo-50 to-purple-50 dark:from-indigo-900/40 dark:to-purple-900/40 border-2 border-indigo-300 dark:border-indigo-700 rounded-lg p-6 mt-8">
+                    <h4 class="font-bold text-indigo-900 dark:text-indigo-100 mb-3 text-lg">🔬 Complete Hyperparameter Sweep Results</h4>
+                    <p class="text-indigo-800 dark:text-indigo-200 mb-4">
+                        Want to see the full story? We conducted a comprehensive grid search over 72 configurations, 
+                        testing different dataset sizes (100-2000 samples), batch sizes, learning rates, and epoch counts.
+                    </p>
+                    <a href="chgnet_finetuning_results.html" 
+                       class="inline-block bg-indigo-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-indigo-700 transition shadow-lg">
+                        View Detailed Results & Analysis →
+                    </a>
+                    <p class="text-xs text-indigo-700 dark:text-indigo-300 mt-3">
+                        Includes: baseline metrics, top configurations, sample efficiency analysis, and replication script
+                    </p>
+                </div>
+            </div>
+
+            <h2 class="text-2xl font-bold mt-10 mb-4">The RL Environment: Multi-Turn Crystal Relaxation</h2>
+            
+            <!-- Environment Tabs -->
+            <div class="border-b border-gray-200 dark:border-gray-700 mb-6">
+                <div class="flex space-x-1 overflow-x-auto">
+                    <button class="tab-button active" onclick="switchTab(event, 'env-overview')">Overview</button>
+                    <button class="tab-button" onclick="switchTab(event, 'env-format')">Format</button>
+                    <button class="tab-button" onclick="switchTab(event, 'env-composition')">Composition</button>
+                    <button class="tab-button" onclick="switchTab(event, 'env-energy')">🔮 Formation Energy</button>
+                    <button class="tab-button" onclick="switchTab(event, 'env-forces')">🔮 Forces</button>
+                    <button class="tab-button" onclick="switchTab(event, 'env-bonds')">Bond Lengths</button>
+                </div>
+            </div>
+            
+            <!-- Environment Overview Tab -->
+            <div id="env-overview" class="tab-content active">
+                <p class="mb-4">
+                    The crystal relaxation task is framed as a <strong>MultiTurnEnv</strong>—a multi-step reinforcement 
+                    learning environment where the agent iteratively refines a disordered crystal structure to minimize 
+                    its energy and achieve a stable configuration.
+                </p>
+                <div class="bg-gradient-to-r from-purple-50 to-blue-50 dark:from-purple-900/40 dark:to-blue-900/40 border-l-4 border-purple-500 dark:border-purple-600 p-6 rounded-r-lg mb-6">
+                    <h3 class="text-purple-800 dark:text-purple-200 font-bold mb-3">🎯 Objective</h3>
+                    <p class="text-purple-900 dark:text-purple-100 mb-3">
+                        Given a disordered initial structure, the agent must generate a valid CIF file that:
+                    </p>
+                    <ul class="list-disc list-inside text-purple-900 dark:text-purple-100 space-y-1">
+                        <li>Has valid crystallographic format</li>
+                        <li>Matches the target composition</li>
+                        <li>Achieves formation energy below 0.1 eV/atom</li>
+                        <li>Minimizes atomic forces (well-relaxed)</li>
+                        <li>Maintains physically reasonable bond lengths</li>
+                    </ul>
+                </div>
+                
+                <h3 class="text-lg font-bold mt-6 mb-3">How It Works</h3>
+                <div class="space-y-4 mb-6">
+                    <div class="flex items-start space-x-3">
+                        <span class="text-2xl">1️⃣</span>
+                        <div>
+                            <strong>Initial State:</strong> The environment provides a disordered crystal structure 
+                            from the MP20 dataset with high formation energy.
+                        </div>
+                    </div>
+                    <div class="flex items-start space-x-3">
+                        <span class="text-2xl">2️⃣</span>
+                        <div>
+                            <strong>Agent Action:</strong> The LLM agent generates a response containing:
+                            <ul class="list-disc list-inside ml-5 mt-1 text-gray-700">
+                                <li>Reasoning about structural improvements (in <code>&lt;|think_start|&gt;...&lt;|think_end|&gt;</code>)</li>
+                                <li>A proposed CIF structure (in <code>&lt;|answer_start|&gt;...&lt;|answer_end|&gt;</code>)</li>
+                            </ul>
+                        </div>
+                    </div>
+                    <div class="flex items-start space-x-3">
+                        <span class="text-2xl">3️⃣</span>
+                        <div>
+                            <strong>Evaluation:</strong> CHGNet evaluates the proposed structure across multiple rubrics, 
+                            computing energies, forces, and bond lengths.
+                        </div>
+                    </div>
+                    <div class="flex items-start space-x-3">
+                        <span class="text-2xl">4️⃣</span>
+                        <div>
+                            <strong>Feedback:</strong> The environment provides detailed feedback on what passed/failed, 
+                            guiding the agent toward better structures in subsequent turns.
+                        </div>
+                    </div>
+                </div>
+                
+                <h3 class="text-lg font-bold mt-6 mb-3">Reward Structure</h3>
+                <p class="mb-3">The total reward is a weighted sum of individual rubric scores:</p>
+                <div class="bg-gray-50 border border-gray-200 p-4 rounded-lg">
+                    <table class="w-full text-sm">
+                        <thead>
+                            <tr class="border-b border-gray-300">
+                                <th class="text-left py-2">Rubric</th>
+                                <th class="text-center py-2">Weight</th>
+                                <th class="text-left py-2">Criteria</th>
+                            </tr>
+                        </thead>
+                        <tbody class="text-gray-700">
+                            <tr class="border-b border-gray-200">
+                                <td class="py-2">Format</td>
+                                <td class="text-center">0.10</td>
+                                <td>Valid CIF syntax</td>
+                            </tr>
+                            <tr class="border-b border-gray-200">
+                                <td class="py-2">Composition</td>
+                                <td class="text-center">0.15</td>
+                                <td>Matches target formula</td>
+                            </tr>
+                            <tr class="border-b border-gray-200 dark:border-gray-700">
+                                <td class="py-2 font-bold">Formation Energy</td>
+                                <td class="text-center font-bold">0.60</td>
+                                <td class="font-bold">&lt; 0.1 eV/atom</td>
+                            </tr>
+                            <tr class="border-b border-gray-200 dark:border-gray-700">
+                                <td class="py-2">Forces</td>
+                                <td class="text-center">0.24</td>
+                                <td>Low atomic forces</td>
+                            </tr>
+                            <tr>
+                                <td class="py-2">Bond Lengths</td>
+                                <td class="text-center">0.15</td>
+                                <td>Physically reasonable</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                <p class="text-sm text-gray-600 dark:text-gray-400 mt-3">
+                    <strong>Note:</strong> Formation energy has the highest weight (60%) as it's the primary indicator 
+                    of structural stability.
+                </p>
+            </div>
+            
+            <!-- Format Rubric Tab -->
+            <div id="env-format" class="tab-content">
+                <h3 class="text-lg font-bold mb-3">📄 Format Rubric (Weight: 0.10)</h3>
+                <p class="mb-4 text-gray-700 dark:text-gray-300">
+                    Ensures the agent produces syntactically valid CIF files and properly uses the answer tags.
+                </p>
+                
+                <div class="bg-blue-50 dark:bg-blue-900/40 border-l-4 border-blue-500 dark:border-blue-700 p-4 mb-4">
+                    <h4 class="font-bold text-blue-900 dark:text-blue-100 mb-2">What It Checks:</h4>
+                    <ul class="list-disc list-inside text-blue-900 dark:text-blue-100 space-y-1">
+                        <li>CIF string is present between <code>&lt;|answer_start|&gt;</code> and <code>&lt;|answer_end|&gt;</code> tags</li>
+                        <li>CIF can be parsed by pymatgen's <code>CifParser</code></li>
+                        <li>Structure contains valid crystallographic data</li>
+                        <li>No critical syntax errors in the CIF format</li>
+                    </ul>
+                </div>
+                
+                <h4 class="font-bold mb-2">Scoring:</h4>
+                <pre class="bg-gray-900 text-gray-100 p-4 rounded-lg text-sm mb-4"><code>if CIF successfully parsed:
+    reward = 1.0 * weight (0.10)
+else:
+    reward = 0.0</code></pre>
+                
+                <p class="text-gray-700 dark:text-gray-300">
+                    <strong>Why it matters:</strong> Without a valid CIF, the structure cannot be evaluated by CHGNet. 
+                    This rubric ensures the agent learns the proper format before focusing on energy optimization.
+                </p>
+            </div>
+            
+            <!-- Composition Rubric Tab -->
+            <div id="env-composition" class="tab-content">
+                <h3 class="text-lg font-bold mb-3">⚗️ Composition Rubric (Weight: 0.15)</h3>
+                <p class="mb-4 text-gray-700 dark:text-gray-300">
+                    Verifies that the generated structure has the correct chemical composition in the right ratios.
+                </p>
+                
+                <div class="bg-green-50 dark:bg-green-900/40 border-l-4 border-green-500 dark:border-green-700 p-4 mb-4">
+                    <h4 class="font-bold text-green-900 dark:text-green-100 mb-2">What It Checks:</h4>
+                    <ul class="list-disc list-inside text-green-900 dark:text-green-100 space-y-1">
+                        <li>Composition matches the target formula (e.g., NaCl, Li₂O)</li>
+                        <li>Element ratios are correct (reduced composition)</li>
+                        <li>No extra or missing elements</li>
+                    </ul>
+                </div>
+                
+                <h4 class="font-bold mb-2">Implementation:</h4>
+                <pre class="bg-gray-900 text-gray-100 p-4 rounded-lg text-sm mb-4"><code># Uses pymatgen's ElementComparator
+cif_composition = structure.composition.reduced_composition
+target_composition = Composition(target_formula).reduced_composition
+
+if ElementComparator().are_equal(cif_composition, target_composition):
+    reward = 1.0 * weight (0.15)
+else:
+    reward = 0.0</code></pre>
+                
+                <p class="text-gray-700 dark:text-gray-300">
+                    <strong>Why it matters:</strong> The chemical composition fundamentally determines material properties. 
+                    An agent that generates NaCl₂ instead of NaCl has failed at a basic chemistry level.
+                </p>
+            </div>
+            
+            <!-- Formation Energy Rubric Tab -->
+            <div id="env-energy" class="tab-content">
+                <h3 class="text-lg font-bold mb-3">⚡ Formation Energy Rubric (Weight: 0.60)</h3>
+                <p class="mb-4 text-gray-700 dark:text-gray-300">
+                    The <strong>most important rubric</strong>—evaluates thermodynamic stability through formation energy.
+                </p>
+                
+                <div class="bg-yellow-50 dark:bg-yellow-900/40 border-l-4 border-yellow-500 dark:border-yellow-700 p-4 mb-4">
+                    <h4 class="font-bold text-yellow-900 dark:text-yellow-100 mb-2">What It Checks:</h4>
+                    <ul class="list-disc list-inside text-yellow-900 dark:text-yellow-100 space-y-1">
+                        <li>Formation energy per atom &lt; 0.1 eV/atom (threshold)</li>
+                        <li>Calculated using fine-tuned CHGNet model</li>
+                        <li>Lower energy = more stable structure = higher reward</li>
+                    </ul>
+                </div>
+                
+                <h4 class="font-bold mb-3">Available Reward Strategies</h4>
+                <p class="mb-3 text-sm text-gray-600 dark:text-gray-400">The environment supports three different reward functions to guide the optimization process:</p>
+                
+                <div class="space-y-4 mb-6">
+                    <!-- Discrete -->
+                    <div class="bg-white dark:bg-gray-800 border dark:border-gray-700 rounded-lg p-4 shadow-sm">
+                        <h5 class="font-bold text-gray-800 dark:text-gray-200 mb-1">1. Discrete Reward (Step Function)</h5>
+                        <p class="text-xs text-gray-600 dark:text-gray-400 mb-2">Binary feedback. Simple but provides sparse gradients.</p>
+                        <pre class="bg-gray-900 text-gray-100 p-3 rounded text-xs overflow-x-auto"><code>def formation_energy_discrete(..., threshold=0.1):
+    if energy <= threshold:
+        return 1.0
+    return 0.0</code></pre>
+                    </div>
+
+                    <!-- Linear -->
+                    <div class="bg-white dark:bg-gray-800 border dark:border-gray-700 rounded-lg p-4 shadow-sm ring-2 ring-blue-100 dark:ring-blue-900">
+                        <div class="flex items-center justify-between mb-1">
+                            <h5 class="font-bold text-blue-800 dark:text-blue-200">2. Linear Reward (Default)</h5>
+                            <span class="bg-blue-100 dark:bg-blue-900/60 text-blue-800 dark:text-blue-200 text-xs px-2 py-1 rounded">Recommended</span>
+                        </div>
+                        <p class="text-xs text-gray-600 dark:text-gray-400 mb-2">Continuous feedback. Decays linearly as energy rises above threshold.</p>
+                        <pre class="bg-gray-900 text-gray-100 p-3 rounded text-xs overflow-x-auto"><code>def formation_energy_linear(..., threshold=0.1, max_penalty=2.0):
+    if energy <= threshold:
+        return 1.0
+    elif energy >= threshold + max_penalty:
+        return 0.0
+    else:
+        # Interpolate 1.0 -> 0.0
+        return 1.0 - (energy - threshold) / max_penalty</code></pre>
+                    </div>
+
+                    <!-- Exponential -->
+                    <div class="bg-white dark:bg-gray-800 border dark:border-gray-700 rounded-lg p-4 shadow-sm">
+                        <h5 class="font-bold text-gray-800 dark:text-gray-200 mb-1">3. Exponential Reward</h5>
+                        <p class="text-xs text-gray-600 dark:text-gray-400 mb-2">Aggressive penalty for high energy structures.</p>
+                        <pre class="bg-gray-900 text-gray-100 p-3 rounded text-xs overflow-x-auto"><code>def formation_energy_exponential(..., threshold=0.1, scale=1.0):
+    if energy <= threshold:
+        return 1.0
+    excess = energy - threshold
+    return np.exp(-excess / scale)</code></pre>
+                    </div>
+                </div>
+                
+                <div class="bg-red-50 dark:bg-red-900/40 border-l-4 border-red-500 dark:border-red-700 p-4 mb-4">
+                    <h4 class="font-bold text-red-900 dark:text-red-100 mb-2">⚠️ Critical Threshold</h4>
+                    <p class="text-red-900 dark:text-red-100">
+                        Structures with formation energy above 0.1 eV/atom are considered thermodynamically 
+                        <strong>unstable</strong> and unlikely to exist naturally. The agent must learn to 
+                        minimize this value through proper atomic positioning and lattice parameters.
+                    </p>
+                </div>
+                
+                <p class="text-gray-700 dark:text-gray-300">
+                    <strong>Why it matters:</strong> Formation energy is the gold standard for predicting whether a 
+                    material can be synthesized. This 60% weight ensures the agent prioritizes structural stability 
+                    above all else.
+                </p>
+            </div>
+            
+            <!-- Forces Rubric Tab -->
+            <div id="env-forces" class="tab-content">
+                <h3 class="text-lg font-bold mb-3">🔧 Forces Rubric (Weight: 0.24)</h3>
+                <p class="mb-4 text-gray-700 dark:text-gray-300">
+                    Measures how well-relaxed the structure is by examining forces on individual atoms.
+                </p>
+                
+                <div class="bg-purple-50 dark:bg-purple-900/40 border-l-4 border-purple-500 dark:border-purple-700 p-4 mb-4">
+                    <h4 class="font-bold text-purple-900 dark:text-purple-100 mb-2">What It Checks:</h4>
+                    <ul class="list-disc list-inside text-purple-900 dark:text-purple-100 space-y-1">
+                        <li>Maximum force on any atom &lt; threshold (typically 0.5 eV/Å)</li>
+                        <li>Average force magnitude across all atoms</li>
+                        <li>Indicates if atoms are in equilibrium positions</li>
+                    </ul>
+                </div>
+                
+                <h4 class="font-bold mb-3">Available Reward Strategies</h4>
+                <p class="mb-3 text-sm text-gray-600 dark:text-gray-400">The environment provides three ways to reward structural relaxation:</p>
+
+                <div class="space-y-4 mb-6">
+                    <!-- Discrete -->
+                    <div class="bg-white dark:bg-gray-800 border dark:border-gray-700 rounded-lg p-4 shadow-sm">
+                        <h5 class="font-bold text-gray-800 dark:text-gray-200 mb-1">1. Discrete Reward</h5>
+                        <p class="text-xs text-gray-600 dark:text-gray-400 mb-2">Strict binary check. Only rewards if the maximum force on any atom is below threshold.</p>
+                        <pre class="bg-gray-900 text-gray-100 p-3 rounded text-xs overflow-x-auto"><code>def forces_discrete(..., threshold=0.05):
+    # forces = get_forces(structure)
+    max_force = np.max(np.linalg.norm(forces, axis=1))
+    return 1.0 if max_force <= threshold else 0.0</code></pre>
+                    </div>
+
+                    <!-- Continuous Decay -->
+                    <div class="bg-white dark:bg-gray-800 border dark:border-gray-700 rounded-lg p-4 shadow-sm ring-2 ring-purple-100 dark:ring-purple-900">
+                        <div class="flex items-center justify-between mb-1">
+                            <h5 class="font-bold text-purple-800 dark:text-purple-200">2. Continuous Decay (Default)</h5>
+                            <span class="bg-purple-100 dark:bg-purple-900/60 text-purple-800 dark:text-purple-200 text-xs px-2 py-1 rounded">Recommended</span>
+                        </div>
+                        <p class="text-xs text-gray-600 dark:text-gray-400 mb-2">Smoothly penalizes larger forces. Even imperfect structures get some credit, guiding the gradient.</p>
+                        <pre class="bg-gray-900 text-gray-100 p-3 rounded text-xs overflow-x-auto"><code>def forces_continuous_decay(..., decay=1.0):
+    # forces = get_forces(structure)
+    max_force = np.max(np.linalg.norm(forces, axis=1))
+    return 1.0 / (1.0 + (decay * max_force))</code></pre>
+                    </div>
+
+                    <!-- Continuous Ratio -->
+                    <div class="bg-white dark:bg-gray-800 border dark:border-gray-700 rounded-lg p-4 shadow-sm">
+                        <h5 class="font-bold text-gray-800 dark:text-gray-200 mb-1">3. Continuous Ratio</h5>
+                        <p class="text-xs text-gray-600 dark:text-gray-400 mb-2">Rewards the <em>percentage</em> of well-behaved atoms. Good for large structures.</p>
+                        <pre class="bg-gray-900 text-gray-100 p-3 rounded text-xs overflow-x-auto"><code>def forces_continuous_ratio(..., threshold=0.05):
+    # forces = get_forces(structure)
+    force_norms = np.linalg.norm(forces, axis=1)
+    good_forces = np.sum(force_norms <= threshold)
+    return good_forces / len(force_norms)</code></pre>
+                    </div>
+                </div>
+                
+                <p class="text-gray-700 dark:text-gray-300 mb-4">
+                    <strong>Physical intuition:</strong> In a stable structure, atoms sit at energy minima where 
+                    forces are near zero. Large forces indicate atoms "want" to move—the structure hasn't truly relaxed.
+                </p>
+                
+                <div class="bg-gray-100 dark:bg-gray-800 border border-gray-300 dark:border-gray-700 p-4 rounded-lg">
+                    <p class="text-sm text-gray-700 dark:text-gray-300">
+                        <strong>💡 Agent learning:</strong> This rubric teaches the agent that low formation energy 
+                        alone isn't enough—the structure must also be mechanically stable with minimal residual forces.
+                    </p>
+                </div>
+            </div>
+            
+            <!-- Bond Lengths Rubric Tab -->
+            <div id="env-bonds" class="tab-content">
+                <h3 class="text-lg font-bold mb-3">📏 Bond Lengths Rubric (Weight: 0.15)</h3>
+                <p class="mb-4 text-gray-700 dark:text-gray-300">
+                    Validates that interatomic distances are chemically reasonable based on atomic radii and bond types.
+                </p>
+                
+                <div class="bg-teal-50 dark:bg-teal-900/40 border-l-4 border-teal-500 dark:border-teal-700 p-4 mb-4">
+                    <h4 class="font-bold text-teal-900 dark:text-teal-100 mb-2">What It Checks:</h4>
+                    <ul class="list-disc list-inside text-teal-900 dark:text-teal-100 space-y-1">
+                        <li>Bond lengths fall within expected ranges (±32% tolerance)</li>
+                        <li>Accounts for ionic vs covalent bonding (electronegativity difference)</li>
+                        <li>Special handling for hydrogen bonds (more flexible)</li>
+                        <li>Uses pymatgen's <code>CrystalNN</code> to identify bonded atoms</li>
+                    </ul>
+                </div>
+                
+                <h4 class="font-bold mb-3">Available Reward Strategies</h4>
+                <p class="mb-3 text-sm text-gray-600 dark:text-gray-400">You can configure the strictness of the bond length check:</p>
+
+                <div class="space-y-4 mb-6">
+                    <!-- Discrete -->
+                    <div class="bg-white dark:bg-gray-800 border dark:border-gray-700 rounded-lg p-4 shadow-sm">
+                        <h5 class="font-bold text-gray-800 dark:text-gray-200 mb-1">1. Discrete Reward</h5>
+                        <p class="text-xs text-gray-600 dark:text-gray-400 mb-2">Binary accept/reject. Only rewards structures where the global bond score exceeds a threshold.</p>
+                        <pre class="bg-gray-900 text-gray-100 p-3 rounded text-xs overflow-x-auto"><code>def bond_lengths_discrete(..., threshold=0.75):
+    # score = bond_length_reasonableness_score(structure)
+    if not score or score < 0:
+        return 0.0
+    return 1.0 if score >= threshold else 0.0</code></pre>
+                    </div>
+
+                    <!-- Continuous -->
+                    <div class="bg-white dark:bg-gray-800 border dark:border-gray-700 rounded-lg p-4 shadow-sm ring-2 ring-teal-100 dark:ring-teal-900/40">
+                         <div class="flex items-center justify-between mb-1">
+                            <h5 class="font-bold text-teal-800 dark:text-teal-200">2. Continuous Reward (Default)</h5>
+                            <span class="bg-teal-100 dark:bg-teal-900/60 text-teal-800 dark:text-teal-200 text-xs px-2 py-1 rounded">Recommended</span>
+                        </div>
+                        <p class="text-xs text-gray-600 dark:text-gray-400 mb-2">Returns the raw reasonableness score (0.0 to 1.0), encouraging incremental improvements.</p>
+                        <pre class="bg-gray-900 text-gray-100 p-3 rounded text-xs overflow-x-auto"><code>def bond_lengths_continuous(..., **kwargs):
+    # score = bond_length_reasonableness_score(structure)
+    if not score or score < 0:
+        return 0.0
+    # Returns raw score 0.0 - 1.0
+    return max(0.0, min(1.0, score))</code></pre>
+                    </div>
+                </div>
+
+                <div class="bg-orange-50 dark:bg-orange-900/40 border-l-4 border-orange-500 dark:border-orange-700 p-4 mb-4">
+                    <h4 class="font-bold text-orange-900 dark:text-orange-100 mb-2">Common Failures:</h4>
+                    <ul class="list-disc list-inside text-orange-900 dark:text-orange-100 space-y-1">
+                        <li>Atoms too close → unphysical overlap</li>
+                        <li>Atoms too far → weak/nonexistent bonding</li>
+                        <li>Incorrect lattice parameters → compressed/expanded structure</li>
+                    </ul>
+                </div>
+                
+                <p class="text-gray-700 dark:text-gray-300">
+                    <strong>Why it matters:</strong> Even if CHGNet predicts low energy, physically impossible bond 
+                    lengths indicate the structure is chemically unrealistic. This rubric acts as a sanity check on 
+                    the agent's geometric proposals.
+                </p>
+            </div>
+
+            <!-- Eval Environment Callout -->
+            <div class="bg-gradient-to-r from-blue-50 to-cyan-50 dark:from-blue-900/40 dark:to-cyan-900/40 border-2 border-blue-300 dark:border-blue-700 rounded-lg p-6 mt-8 mb-8">
+                <h4 class="font-bold text-blue-900 dark:text-blue-100 mb-3 text-lg">🧪 Evaluation-Only Environment</h4>
+                <p class="text-blue-800 dark:text-blue-200 mb-4">
+                    In addition to the RL training environment described above, we've created a separate 
+                    <strong>evaluation benchmark</strong> designed specifically to measure LLM progress on crystal 
+                    reasoning, materials science concepts, and structured scientific outputs.
+                </p>
+                <p class="text-blue-800 dark:text-blue-200 mb-4 text-sm">
+                    This evaluation environment uses the same rubric system (format, composition, formation energy, 
+                    forces, bond lengths) but applies it to a diverse set of tasks testing different aspects of 
+                    crystal generation and reasoning—without any training involved.
+                </p>
+                <a href="eval_environment.html" 
+                   class="inline-block bg-blue-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-blue-700 transition shadow-lg">
+                    Learn About the Evaluation Environment →
+                </a>
+                <p class="text-xs text-blue-700 dark:text-blue-300 mt-3">
+                    Includes: task design, evaluation philosophy, and use cases for LLM benchmarking
+                </p>
+            </div>
+
+            <h2 class="text-2xl font-bold mt-10 mb-4">Implementation with Prime Intellect</h2>
+            <p class="mb-4">
+                The environment is designed to be plug-and-play with the Prime Intellect ecosystem. Below is the technical specification 
+                and usage guide for the `crystal-relaxation` environment.
+            </p>
+
+            <div class="bg-blue-50 dark:bg-blue-900/40 border border-blue-200 dark:border-blue-700 rounded-lg p-5 mb-8">
+                <h3 class="text-lg font-bold text-blue-900 dark:text-blue-100 mb-2">Environment Metadata</h3>
+                <ul class="space-y-1 text-sm text-blue-800 dark:text-blue-200">
+                    <li><strong>Environment ID:</strong> <code>crystal-relaxation</code></li>
+                    <li><strong>Description:</strong> Crystal Generation Tasks (Stability, Composition, and validity constraints)</li>
+                    <li><strong>Tags:</strong> <span class="bg-blue-200 dark:bg-blue-800 text-blue-800 dark:text-blue-100 px-2 py-0.5 rounded text-xs">materials</span> <span class="bg-blue-200 dark:bg-blue-800 text-blue-800 dark:text-blue-100 px-2 py-0.5 rounded text-xs">crystals</span> <span class="bg-blue-200 dark:bg-blue-800 text-blue-800 dark:text-blue-100 px-2 py-0.5 rounded text-xs">grpo</span></li>
+                    <li><strong>Primary Dataset:</strong> MP-20 (Materials Project)</li>
+                </ul>
+            </div>
+
+            <h3 class="text-xl font-bold mt-6 mb-3">Task Architecture</h3>
+            <p class="mb-4">
+                The environment supports multi-turn refinements using a custom parser. The rubric system is hierarchical:
+            </p>
+            <ul class="list-disc list-inside mb-6 ml-4 text-gray-700 dark:text-gray-300">
+                <li><strong>Level 1:</strong> Valid Answer (Parsable format, correct schema)</li>
+                <li><strong>Level 2:</strong> Constraints (Target composition match, Space Group match)</li>
+                <li><strong>Level 3:</strong> Validity (Forces &lt; 0.1 eV/Å, Bond lengths ±32%)</li>
+            </ul>
+
+            <h3 class="text-xl font-bold mt-8 mb-4">Quickstart</h3>
+            <p class="mb-3">1. Start the evaluation server (preferably in a background terminal or tmux pane):</p>
+            <pre class="bg-gray-900 text-gray-100 p-4 rounded-lg overflow-x-auto text-sm mb-4"><code>export CHGNET_PATH="./crystal_relaxation/finetuned_chgnet_model.pth"
+uvicorn crystal_relaxation.server:app --host 0.0.0.0 --port 1111</code></pre>
+            
+            <p class="mb-3">2. Run an evaluation using <code>vf-eval</code>:</p>
+            
+            <p class="text-sm font-bold text-gray-600 dark:text-gray-400 mb-1">Option A: Crystal Generation Task</p>
+            <pre class="bg-gray-900 text-gray-100 p-4 rounded-lg overflow-x-auto text-sm mb-4"><code>uv run vf-eval crystal_relaxation \
+--num-examples 5 \
+--rollouts-per-example 3 \
+-m gpt-5 \
+--env-args='{"dataset_path":"./data/mp_20/mp_20_group_classification_dataset.json","max_turns":1,"enabled_rubrics":["spacegroup_classification"], "to_generate_cif": false}'</code></pre>
+
+            <p class="text-sm font-bold text-gray-600 dark:text-gray-400 mb-1">Option B: Classification Task</p>
+            <pre class="bg-gray-900 text-gray-100 p-4 rounded-lg overflow-x-auto text-sm mb-8"><code>uv run vf-eval crystal_relaxation \
+--num-examples 5 \
+--rollouts-per-example 3 \
+-m gpt-5 \
+--env-args='{"dataset_path":"./data/mp_20/mp_20_relaxation_generation_dataset.json","max_turns":2,"enabled_rubrics":["format","composition","formation_energy","bond_lengths"],"port":1111}'</code></pre>
+
+            <h3 class="text-xl font-bold mt-8 mb-4">Environment Arguments</h3>
+            <div class="overflow-x-auto mb-8">
+                <table class="min-w-full text-sm text-left border rounded-lg overflow-hidden">
+                    <thead class="bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-200 font-bold uppercase">
+                        <tr>
+                            <th class="px-4 py-3 border-b border-gray-200 dark:border-gray-700">Arg</th>
+                            <th class="px-4 py-3 border-b border-gray-200 dark:border-gray-700">Type</th>
+                            <th class="px-4 py-3 border-b border-gray-200 dark:border-gray-700">Default</th>
+                            <th class="px-4 py-3 border-b border-gray-200 dark:border-gray-700">Description</th>
+                        </tr>
+                    </thead>
+                    <tbody class="bg-white dark:bg-gray-900 divide-y divide-gray-200 dark:divide-gray-700">
+                        <tr>
+                            <td class="px-4 py-2 font-mono text-indigo-600 dark:text-indigo-400">max_turns</td>
+                            <td class="px-4 py-2">int</td>
+                            <td class="px-4 py-2">1</td>
+                            <td class="px-4 py-2">Maximum number of refinement turns</td>
+                        </tr>
+                        <tr>
+                            <td class="px-4 py-2 font-mono text-indigo-600 dark:text-indigo-400">target_composition</td>
+                            <td class="px-4 py-2">str</td>
+                            <td class="px-4 py-2">None</td>
+                            <td class="px-4 py-2">Optional target chemical composition</td>
+                        </tr>
+                        <tr>
+                            <td class="px-4 py-2 font-mono text-indigo-600 dark:text-indigo-400">formation_energy_threshold</td>
+                            <td class="px-4 py-2">float</td>
+                            <td class="px-4 py-2">0.1</td>
+                            <td class="px-4 py-2">Max acceptable energy (eV/atom)</td>
+                        </tr>
+                        <tr>
+                            <td class="px-4 py-2 font-mono text-indigo-600 dark:text-indigo-400">to_generate_cif</td>
+                            <td class="px-4 py-2">bool</td>
+                            <td class="px-4 py-2">True</td>
+                            <td class="px-4 py-2">True for generation, False for classification</td>
+                        </tr>
+                        <tr>
+                            <td class="px-4 py-2 font-mono text-indigo-600">port</td>
+                            <td class="px-4 py-2">int</td>
+                            <td class="px-4 py-2">1111</td>
+                            <td class="px-4 py-2">Port for CHGNet server</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <h3 class="text-xl font-bold mt-8 mb-4">Metrics</h3>
+            <div class="bg-white border text-sm rounded-lg overflow-hidden mb-8">
+                <table class="min-w-full text-left">
+                    <thead class="bg-gray-50 border-b">
+                        <tr>
+                            <th class="px-4 py-2 font-bold text-gray-700">Metric</th>
+                            <th class="px-4 py-2 font-bold text-gray-700">Meaning</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y">
+                        <tr>
+                            <td class="px-4 py-2 font-mono text-indigo-600">reward</td>
+                            <td class="px-4 py-2">Main scalar reward (weighted sum of criteria)</td>
+                        </tr>
+                        <tr>
+                            <td class="px-4 py-2 font-mono text-indigo-600">accuracy</td>
+                            <td class="px-4 py-2">Exact match on target answer</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+            
+            <h2 class="text-2xl font-bold mt-10 mb-4">What's Next?</h2>
+            <p class="mb-6">
+                My goal is to see how far we can push agentic "intuition" in chemistry. If an agent can learn 
+                the physics of simple oxides, can it generalize to complex superconductors?
+            </p>
+
+            <h2 class="text-2xl font-bold mt-10 mb-4">References</h2>
+            <div class="bg-gray-50 border border-gray-200 rounded-lg p-6 mb-6">
+                <ol class="space-y-4 text-sm text-gray-700">
+                    <li>
+                        <strong>[1] CHGNet:</strong> Deng, B., Zhong, P., Jun, K., Riebesell, J., Han, K., Bartel, C. J., & Ceder, G. (2023). 
+                        <em>CHGNet as a pretrained universal neural network potential for charge-informed atomistic modelling.</em> 
+                        Nature Machine Intelligence, 5(9), 1031-1041. 
+                        <a href="https://doi.org/10.1038/s42256-023-00716-3" class="text-indigo-600 hover:text-indigo-800">doi:10.1038/s42256-023-00716-3</a>
+                    </li>
+                    <li>
+                        <strong>[2] Materials Project:</strong> Jain, A., Ong, S. P., Hautier, G., Chen, W., Richards, W. D., Dacek, S., ... & Persson, K. A. (2013). 
+                        <em>Commentary: The Materials Project: A materials genome approach to accelerating materials innovation.</em> 
+                        APL Materials, 1(1), 011002. 
+                        <a href="https://doi.org/10.1063/1.4812323" class="text-indigo-600 hover:text-indigo-800">doi:10.1063/1.4812323</a>
+                    </li>
+                    <li>
+                        <strong>[3] MP-20 Dataset:</strong> Chen, C., Zuo, Y., Ye, W., Li, X., & Ong, S. P. (2021). 
+                        <em>Learning properties of ordered and disordered materials from multi-fidelity data.</em> 
+                        Nature Computational Science, 1(1), 46-53. 
+                        <a href="https://doi.org/10.1038/s43588-020-00002-x" class="text-indigo-600 hover:text-indigo-800">doi:10.1038/s43588-020-00002-x</a>
+                    </li>
+                    <li>
+                        <strong>[4] Formation Energy Threshold:</strong> The 0.1 eV/atom threshold for thermodynamic stability is based on commonly accepted criteria in computational materials science. 
+                        See: Sun, W., Bartel, C. J., Arca, E., Bauers, S. R., Matthews, B., Orvañanos, B., ... & Toney, M. F. (2019). 
+                        <em>A map of the inorganic ternary metal nitrides.</em> 
+                        Nature Materials, 18(7), 732-739.
+                    </li>
+                    <li>
+                        <strong>[5] Graph Neural Networks for Materials:</strong> Xie, T., & Grossman, J. C. (2018). 
+                        <em>Crystal graph convolutional neural networks for an accurate and interpretable prediction of material properties.</em> 
+                        Physical Review Letters, 120(14), 145301.
+                    </li>
+                    <li>
+                        <strong>[6] Reinforcement Learning for Science:</strong> The application of RL to scientific domains draws inspiration from: 
+                        Degrave, J., et al. (2022). 
+                        <em>Magnetic control of tokamak plasmas through deep reinforcement learning.</em> 
+                        Nature, 602(7897), 414-419.
+                    </li>
+                </ol>
+            </div>
+
+            <div class="bg-indigo-50 border-l-4 border-indigo-500 p-4 rounded-r-lg mb-6">
+                <p class="text-indigo-900 text-sm">
+                    <strong>📚 Implementation Note:</strong> Training hyperparameters (batch size, learning rate, epochs) 
+                    and rubric weights were adapted from CHGNet's original training protocol and empirically tuned for 
+                    the RL environment. The formation energy threshold and bond length tolerances follow standard practices 
+                    in computational materials discovery.
+                </p>
+            </div>
+
+            <h2 class="text-2xl font-bold mt-10 mb-4">⚠️ What Didn't Work</h2>
+            <div class="bg-red-50 border border-red-200 rounded-lg p-6 mb-6">
+                <p class="text-gray-600 italic mb-4">
+                    This section documents challenges, failed approaches, and lessons learned during development.
+                </p>
+                
+                <div class="space-y-4 text-gray-700">
+                    <!-- To be filled in -->
+                    <p class="text-sm text-gray-500">
+                        [Content to be added: failed experiments, optimization attempts that didn't pan out, 
+                        alternative approaches tested, debugging challenges, etc.]
+                    </p>
+                </div>
+            </div>
+        </section>
+        <section class="prose prose-indigo lg:prose-xl dark:prose-invert mt-16">
+            <header class="mb-10 border-b border-gray-200 dark:border-gray-700 pb-6">
+                <h2 class="text-3xl font-bold text-gray-900 dark:text-white mb-2">Training Runs: How an LLM "Learns" Physics</h2>
+                <div class="flex items-center text-sm text-gray-500 dark:text-gray-400 italic">
+                    <span>Posted on February 17, 2026</span>
+                    <span class="mx-2">•</span>
+                    <span>Tagged:</span>
+                    <span class="bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 px-2 py-0.5 rounded text-xs ml-2">RL</span>
+                    <span class="bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 px-2 py-0.5 rounded text-xs ml-2">Materials Science</span>
+                </div>
+            </header>
+
+            <p class="text-lg text-gray-700 dark:text-gray-300 mb-6">
+                I’ve spent the last week parsing the logs from the latest GRPO training run (<code>run_id: wwre3g...</code>), and the results are honestly proving to interesting, with some evidence of  a "cognitive shift."
+            </p>
+
+            <p class="mb-8">
+                Over the course of 100 training steps, the model didn't just get "better" at the reward function. It went from checking arithmetic to a "confident computational" scientist running simulations.
+            </p>
+
+            <h3 class="text-2xl font-bold text-indigo-700 dark:text-indigo-400 mt-10 mb-4">1. The Cognitive Shift: From Calculator to Simulator</h3>
+
+            <p class="mb-6">
+                The first finding is the inversion of explicit vs. implicit knowledge. In the early steps (Step 0–20), the model is obsessed with the mechanics of the file format. It writes paragraphs justifying why it changed a coordinate from <code>-0.1</code> to <code>0.9</code> (wrapping the boundary).
+            </p>
+            
+            <p class="mb-6">
+                By Step 80 (peak performance), it stops talking about the math entirely. Instead, it starts hallucinating a "methodology." It claims to be running VASP calculations, checking force convergence thresholds (e.g., <em>"forces < 0.01 eV/Å"</em>), and applying PBE functional corrections. 
+            </p>
+
+            <div class="bg-indigo-50 dark:bg-indigo-900/20 border-l-4 border-indigo-500 dark:border-indigo-400 p-6 my-8 rounded-r-lg">
+                <h4 class="text-indigo-800 dark:text-indigo-200 font-bold mb-2">The "Bond" Paradox</h4>
+                <p class="text-indigo-900 dark:text-indigo-100 mb-3">
+                    I tracked keyword frequency across the run. The word <strong>"bond"</strong> appears ~2.0 times per sample in Step 0. By Step 80, it drops to <strong>0.0</strong>.
+                </p>
+                <p class="text-indigo-900 dark:text-indigo-100">
+                    You might think this means the model stopped caring about bonding. In reality, the <strong>Bond Length Reward</strong> metric spiked from 0.57 to 0.80 in the same period. The model internalized the physics so deeply it no longer needed to "show its work."
+                </p>
+            </div>
+
+            <h3 class="text-2xl font-bold text-indigo-700 dark:text-indigo-400 mt-10 mb-4">2. The "Refinement" Strategy</h3>
+            
+            <p class="mb-6">
+                Early in the run, the model treated the input crystals as "wrong," aggressively resizing the lattice by an average of <strong>0.051 Å</strong> per step. This often broke the symmetry and tanked the reward.
+            </p>
+            <p class="mb-8">
+                By Step 80, the model learned a crucial lesson in materials science: <em>Nature prefers local minima.</em> It switched to a micro-optimization strategy, reducing the lattice modification to just <strong>0.006 Å</strong> (an 88% reduction). It learned that the secret to high rewards wasn't reconstruction, but subtle relaxation.
+            </p>
+
+            <h3 class="text-2xl font-bold text-red-700 dark:text-red-400 mt-10 mb-4">3. The Failure Mode: The "Retry" Illusion</h3>
+
+            <p class="mb-6">
+                Here is the kicker, and probably the biggest headache for my defense: <strong>The model does not learn through iteration.</strong>
+            </p>
+
+            <p class="mb-4">
+                I analyzed 37 cases where the first attempt failed (Energy > 0.1 eV/atom).
+            </p>
+            <ul class="list-disc list-inside mb-6 space-y-2 text-gray-700 dark:text-gray-300">
+                <li><strong>Physical Recoveries:</strong> 0. (Not a single case of fixing bad physics).</li>
+                <li><strong>Syntax Recoveries:</strong> 7. (Fixing missing lines in the CIF file).</li>
+            </ul>
+
+            <p class="mb-8">
+                When the model receives negative feedback like <em>"Formation energy is too high,"</em> it doesn't know how to calculate a gradient from that text. It treats the second turn as a "re-roll" of the dice, repeating the same logic and hoping for a better random seed. It has learned <strong>State Recognition</strong> (what a good crystal looks like) but not <strong>Gradient Descent</strong> (how to fix a bad one).
+            </p>
+
+            <h3 class="text-2xl font-bold text-indigo-700 dark:text-indigo-400 mt-10 mb-4">4. The Silver Lining: In-Context Calibration</h3>
+
+            <p class="mb-6">
+                However, there is one area where two turns helped: <strong>Prediction</strong>. Even though the model couldn't <em>fix</em> the structure, its ability to <em>predict</em> the formation energy improved significantly in the second turn.
+            </p>
+            <p class="mb-6">
+                This suggests an "Actor-Critic" disconnect. The model can use the ground truth from the first turn to calibrate its internal "zero point" (Critic success), even if it lacks the policy to manipulate the atoms to reach that state (Actor failure).
+            </p>
+            
+            <blockquote class="border-l-4 border-gray-300 dark:border-gray-600 pl-4 italic text-gray-600 dark:text-gray-400 my-8 py-2">
+                "The model learns to measure the problem before it learns to fix it."
+            </blockquote>
+
+            <div class="bg-gray-50 dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 pt-6 mt-8">
+                <p class="font-bold text-gray-900 dark:text-white mb-2">Next Steps:</p>
+                <p class="text-gray-700 dark:text-gray-300">
+                    The data implies that simply telling the model "Energy is too high" is useless. I need to implement vector feedback—telling the model exactly <em>which</em> bond is strained—if I want to see true iterative improvement. Back to the cluster.
+                </p>
+            </div>
+
+        </section>
+        <footer class="mt-16 pt-8 border-t border-gray-200 text-center">
+            <h3 class="text-xl font-bold mb-4">Ready to test your agent?</h3>
+            <p class="text-gray-600 mb-6">Explore the environment and start training on the Prime Intellect dashboard.</p>
+            <a href="https://app.primeintellect.ai/dashboard/environments/jmedina9/crystal_relaxation" 
+               class="inline-block bg-black text-white px-8 py-3 rounded-full font-bold hover:bg-gray-800 transition shadow-lg">
+               Go to Environment
+            </a>
+        </footer>
+
+    </main>
+
+    <script>
+        function switchTab(event, tabName) {
+            // Hide all tab content
+            const tabContents = document.getElementsByClassName('tab-content');
+            for (let content of tabContents) {
+                content.classList.remove('active');
+            }
+            
+            // Remove active class from all buttons
+            const tabButtons = document.getElementsByClassName('tab-button');
+            for (let button of tabButtons) {
+                button.classList.remove('active');
+            }
+            
+            // Show selected tab and mark button as active
+            document.getElementById(tabName).classList.add('active');
+            event.currentTarget.classList.add('active');
+        }
+    </script>
+
+    <script>
+        const toggleSwitch = document.querySelector('#theme-toggle');
+        const currentTheme = localStorage.getItem('theme');
+
+        if (currentTheme) {
+            document.documentElement.classList.add(currentTheme);
+            if (currentTheme === 'dark') {
+                toggleSwitch.checked = true;
+            }
+        }
+
+        function switchTheme(e) {
+            if (e.target.checked) {
+                document.documentElement.classList.add('dark');
+                localStorage.setItem('theme', 'dark');
+            } else {
+                document.documentElement.classList.remove('dark');
+                localStorage.setItem('theme', 'light');
+            }
+        }
+
+        toggleSwitch.addEventListener('change', switchTheme, false);
+        
+        // Tab switching logic
+        function switchTab(event, tabId) {
+            // Hide all tab content
+            const contents = document.querySelectorAll('.tab-content');
+            contents.forEach(content => content.classList.remove('active'));
+            
+            // Deactivate all buttons
+            const buttons = document.querySelectorAll('.tab-button');
+            buttons.forEach(button => button.classList.remove('active'));
+            
+            // Show selected tab content
+            document.getElementById(tabId).classList.add('active');
+            
+            // Activate clicked button
+            event.currentTarget.classList.add('active');
+        }
+    </script>
+</body>
+</html>
