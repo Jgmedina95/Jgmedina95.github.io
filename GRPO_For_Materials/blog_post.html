@@ -132,7 +132,7 @@
             <p class="mb-6">
                 The training environment uses a curated subset of the <strong>Materials Project mp-20</strong> benchmark [3], 
                 originally compiled by Chen et al. (2021). The dataset is downloaded directly from HuggingFace:
-                <a href="https://huggingface.co/datasets/4everStudent/mp-20-relaxation-dataset-with-clusters" class="text-indigo-600 hover:underline" target="_blank" rel="noopener">4everStudent/mp-20-relaxation-dataset-with-clusters</a>.
+                <a href="https://huggingface.co/datasets/4everStudent/crystal-relaxation-mp20-with-clusters" class="text-indigo-600 hover:underline" target="_blank" rel="noopener">4everStudent/mp-20-relaxation-dataset-with-clusters</a>.
                 MP-20 contains ~45,000 experimentally reported inorganic crystal structures with up to 20 atoms per unit cell,
                 spanning 89 elements across the periodic table.
             </p>
@@ -982,9 +982,9 @@ uvicorn crystal_relaxation.server:app --host 0.0.0.0 --port 1111</code></pre>
                 </div>
             </div>
         </section>
-        <section class="prose prose-indigo lg:prose-xl dark:prose-invert mt-16">
+                <section class="prose prose-indigo lg:prose-xl dark:prose-invert mt-16">
             <header class="mb-10 border-b border-gray-200 dark:border-gray-700 pb-6">
-                <h2 class="text-3xl font-bold text-gray-900 dark:text-white mb-2">Training Runs: How an LLM "Learns" Physics</h2>
+                <h2 class="text-3xl font-bold text-gray-900 dark:text-white mb-2">Training Runs: How an LLM “Learns” Physics</h2>
                 <div class="flex items-center text-sm text-gray-500 dark:text-gray-400 italic">
                     <span>Posted on February 17, 2026</span>
                     <span class="mx-2">•</span>
@@ -995,81 +995,172 @@ uvicorn crystal_relaxation.server:app --host 0.0.0.0 --port 1111</code></pre>
             </header>
 
             <p class="text-lg text-gray-700 dark:text-gray-300 mb-6">
-                I’ve spent the last week parsing the logs from the latest GRPO training run (<code>run_id: wwre3g...</code>), and the results are proving to be genuinely interesting—the model shows clear evidence of a behavioral phase transition across training steps.</p>
-
-            <p class="mb-8">
-                Over 100 training steps, the model didn't simply improve its reward monotonically. Its reasoning strategy underwent a qualitative shift: early steps show explicit coordinate arithmetic while later steps exhibit emergent simulation-like behavior, with the model invoking DFT methodology it was never explicitly trained on.
+                We ran the crystal relaxation environment on two model scales: a <strong>30B-parameter</strong> model (87 rollout samples, steps 0–100, 11 checkpoints) and a <strong>230B-parameter</strong> model (63 samples, steps 0–070, 8 checkpoints). Both runs use the same reward function, the same filtered MP-20 dataset from HuggingFace, and the same GRPO training loop. What we found is that scale doesn’t just change <em>how well</em> a model learns—it determines <em>what kind of reasoning strategy</em> RL selects for entirely.
             </p>
 
-            <h3 class="text-2xl font-bold text-indigo-700 dark:text-indigo-400 mt-10 mb-4">1. The Cognitive Shift: From Calculator to Simulator</h3>
+            <h3 class="text-2xl font-bold text-indigo-700 dark:text-indigo-400 mt-10 mb-4">1. Reward Trajectories</h3>
 
-            <p class="mb-6">
-                The first finding is the inversion of explicit vs. implicit knowledge. In the early steps (Step 0–20), the model is obsessed with the mechanics of the file format. It writes paragraphs justifying why it changed a coordinate from <code>-0.1</code> to <code>0.9</code> (wrapping the boundary).
-            </p>
-            
-            <p class="mb-6">
-                By Step 80 (peak performance), it stops talking about the math entirely. Instead, it starts hallucinating a "methodology." It claims to be running VASP calculations, checking force convergence thresholds (e.g., <em>"forces < 0.01 eV/Å"</em>), and applying PBE functional corrections. 
-            </p>
+            <p class="mb-4">Both models improve over training, but the trajectories look completely different:</p>
+
+            <div class="overflow-x-auto mb-6">
+                <table class="min-w-full text-sm border rounded-lg overflow-hidden">
+                    <thead class="bg-indigo-50 dark:bg-indigo-900/40 text-gray-700 dark:text-gray-200 font-semibold">
+                        <tr>
+                            <th class="px-4 py-2 text-left">Step</th>
+                            <th class="px-4 py-2 text-center" colspan="2">230B Model</th>
+                            <th class="px-4 py-2 text-center" colspan="2">30B Model</th>
+                        </tr>
+                        <tr class="text-xs text-gray-500 dark:text-gray-400">
+                            <th class="px-4 py-1"></th>
+                            <th class="px-4 py-1 text-center">Mean Reward</th>
+                            <th class="px-4 py-1 text-center">Std</th>
+                            <th class="px-4 py-1 text-center">Mean Reward</th>
+                            <th class="px-4 py-1 text-center">Std</th>
+                        </tr>
+                    </thead>
+                    <tbody class="bg-white dark:bg-gray-900 divide-y divide-gray-200 dark:divide-gray-700 text-gray-700 dark:text-gray-300">
+                        <tr><td class="px-4 py-2">0</td><td class="px-4 py-2 text-center">0.706</td><td class="px-4 py-2 text-center">0.364</td><td class="px-4 py-2 text-center">0.406</td><td class="px-4 py-2 text-center">0.202</td></tr>
+                        <tr class="bg-gray-50 dark:bg-gray-800"><td class="px-4 py-2">10</td><td class="px-4 py-2 text-center">0.705</td><td class="px-4 py-2 text-center">0.145</td><td class="px-4 py-2 text-center">0.710</td><td class="px-4 py-2 text-center">0.235</td></tr>
+                        <tr><td class="px-4 py-2">20</td><td class="px-4 py-2 text-center">0.880</td><td class="px-4 py-2 text-center">0.164</td><td class="px-4 py-2 text-center">0.703</td><td class="px-4 py-2 text-center">0.214</td></tr>
+                        <tr class="bg-gray-50 dark:bg-gray-800"><td class="px-4 py-2">30</td><td class="px-4 py-2 text-center">0.722</td><td class="px-4 py-2 text-center">0.270</td><td class="px-4 py-2 text-center">0.498</td><td class="px-4 py-2 text-center">0.272</td></tr>
+                        <tr><td class="px-4 py-2">40</td><td class="px-4 py-2 text-center">0.502</td><td class="px-4 py-2 text-center">0.308</td><td class="px-4 py-2 text-center">0.727</td><td class="px-4 py-2 text-center">0.223</td></tr>
+                        <tr class="bg-gray-50 dark:bg-gray-800"><td class="px-4 py-2">50</td><td class="px-4 py-2 text-center">0.719</td><td class="px-4 py-2 text-center">0.186</td><td class="px-4 py-2 text-center">0.696</td><td class="px-4 py-2 text-center">0.276</td></tr>
+                        <tr><td class="px-4 py-2">60</td><td class="px-4 py-2 text-center font-bold text-indigo-700 dark:text-indigo-400">0.954</td><td class="px-4 py-2 text-center font-bold text-indigo-700 dark:text-indigo-400">0.116</td><td class="px-4 py-2 text-center">0.589</td><td class="px-4 py-2 text-center">0.275</td></tr>
+                        <tr class="bg-gray-50 dark:bg-gray-800"><td class="px-4 py-2">70</td><td class="px-4 py-2 text-center">0.928</td><td class="px-4 py-2 text-center">0.144</td><td class="px-4 py-2 text-center">0.529</td><td class="px-4 py-2 text-center">0.267</td></tr>
+                        <tr><td class="px-4 py-2">80</td><td class="px-4 py-2 text-center text-gray-400">—</td><td class="px-4 py-2 text-center text-gray-400">—</td><td class="px-4 py-2 text-center font-bold text-purple-700 dark:text-purple-400">0.766</td><td class="px-4 py-2 text-center font-bold text-purple-700 dark:text-purple-400">0.277</td></tr>
+                        <tr class="bg-gray-50 dark:bg-gray-800"><td class="px-4 py-2">90</td><td class="px-4 py-2 text-center text-gray-400">—</td><td class="px-4 py-2 text-center text-gray-400">—</td><td class="px-4 py-2 text-center">0.661</td><td class="px-4 py-2 text-center">0.327</td></tr>
+                        <tr><td class="px-4 py-2">100</td><td class="px-4 py-2 text-center text-gray-400">—</td><td class="px-4 py-2 text-center text-gray-400">—</td><td class="px-4 py-2 text-center text-red-600 dark:text-red-400">0.520</td><td class="px-4 py-2 text-center text-red-600 dark:text-red-400">0.258</td></tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <p class="mb-6">The 230B model follows a <strong>non-monotonic but convergent</strong> trajectory: it dips at step 40 (mean 0.502) before recovering strongly to peak at step 60 (0.954) and sustaining near-peak performance at step 70 (0.928). Critically, its variance <em>contracts</em>—std drops from 0.364 at step 0 to 0.116 at step 60, meaning the model becomes more consistent as it learns. By step 60, even its worst sample (reward 0.692) would have been above-average at step 0.</p>
+
+            <p class="mb-6">The 30B model is more volatile. It peaks at step 80 (0.766) but <strong>regresses to 0.520 by step 100</strong>, with variance that never contracts below 0.20. Its best checkpoint is still 20% below the 230B model’s peak. The single most dramatic data point: at step 30, the 30B model produces the only <strong>zero-reward sample</strong> in either dataset (SnF₃, where the model correctly identifies a symmetry mismatch but fails to produce any valid output).</p>
+
+            <h3 class="text-2xl font-bold text-indigo-700 dark:text-indigo-400 mt-10 mb-4">2. Scale Determines Reasoning Strategy</h3>
+
+            <p class="mb-4">The most surprising finding comes from tracking the length and content of the models’ chain-of-thought reasoning blocks:</p>
+
+            <div class="overflow-x-auto mb-6">
+                <table class="min-w-full text-sm border rounded-lg overflow-hidden">
+                    <thead class="bg-gray-50 dark:bg-gray-800 font-semibold text-gray-700 dark:text-gray-200">
+                        <tr>
+                            <th class="px-4 py-2 text-left">Step</th>
+                            <th class="px-4 py-2 text-center">230B reasoning (chars)</th>
+                            <th class="px-4 py-2 text-center">30B reasoning (chars)</th>
+                        </tr>
+                    </thead>
+                    <tbody class="bg-white dark:bg-gray-900 divide-y divide-gray-200 dark:divide-gray-700 text-gray-700 dark:text-gray-300">
+                        <tr><td class="px-4 py-2">0</td><td class="px-4 py-2 text-center">3,966</td><td class="px-4 py-2 text-center">1,532</td></tr>
+                        <tr class="bg-gray-50 dark:bg-gray-800"><td class="px-4 py-2">20</td><td class="px-4 py-2 text-center">4,440</td><td class="px-4 py-2 text-center">1,502</td></tr>
+                        <tr><td class="px-4 py-2">40</td><td class="px-4 py-2 text-center">5,969</td><td class="px-4 py-2 text-center">1,270</td></tr>
+                        <tr class="bg-gray-50 dark:bg-gray-800"><td class="px-4 py-2">60</td><td class="px-4 py-2 text-center">6,640</td><td class="px-4 py-2 text-center">924</td></tr>
+                        <tr><td class="px-4 py-2">70</td><td class="px-4 py-2 text-center font-bold text-indigo-700 dark:text-indigo-300">7,320 (+85%)</td><td class="px-4 py-2 text-center">810</td></tr>
+                        <tr class="bg-gray-50 dark:bg-gray-800"><td class="px-4 py-2">80</td><td class="px-4 py-2 text-center text-gray-400">—</td><td class="px-4 py-2 text-center">654</td></tr>
+                        <tr><td class="px-4 py-2">100</td><td class="px-4 py-2 text-center text-gray-400">—</td><td class="px-4 py-2 text-center font-bold text-purple-700 dark:text-purple-300">574 (−63%)</td></tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <p class="mb-6">The 230B model’s reasoning <strong>grows by 85%</strong> over training—from 3,966 to 7,320 characters by step 70. The 30B model’s reasoning <strong>shrinks by 63%</strong>—from 1,532 to 574 characters. These are not just different amounts; they are opposite directions. At step 80, one 30B sample produced a reasoning block of <strong>3 characters</strong>—essentially skipping thinking entirely and going straight to CIF output. By step 100, the 30B’s <em>maximum</em> reasoning length (914 chars) is shorter than its step-0 <em>minimum</em> (1,288 chars).</p>
 
             <div class="bg-indigo-50 dark:bg-indigo-900/20 border-l-4 border-indigo-500 dark:border-indigo-400 p-6 my-8 rounded-r-lg">
-                <h4 class="text-indigo-800 dark:text-indigo-200 font-bold mb-2">The "Bond" Paradox</h4>
+                <h4 class="text-indigo-800 dark:text-indigo-200 font-bold mb-3">System 1 vs. System 2 Reasoning</h4>
                 <p class="text-indigo-900 dark:text-indigo-100 mb-3">
-                    I tracked keyword frequency across the run. The word <strong>"bond"</strong> appears ~2.0 times per sample in Step 0. By Step 80, it drops to <strong>0.0</strong>.
+                    This maps cleanly onto Kahneman’s dual-process framework. The <strong>230B model develops System 2 reasoning</strong>: deliberative, step-by-step crystallographic analysis that deepens over training. By step 30, it correctly identifies hexagonal cells from γ = 120°; by step 60–70, it references Wyckoff positions, prototype structures, and Pnma space groups it was never explicitly trained on—and explicitly acknowledges it cannot run real DFT while still producing near-perfect structures.
                 </p>
                 <p class="text-indigo-900 dark:text-indigo-100">
-                    You might think this means the model stopped caring about bonding. In reality, the <strong>Bond Length Reward</strong> metric spiked from 0.57 to 0.80 in the same period. The model internalized the physics so deeply it no longer needed to "show its work."
+                    The <strong>30B model converges on System 1</strong>: compressed, procedural preambles (“relaxation will be performed using DFT—output below”) that discard domain vocabulary in favor of getting directly to the CIF. RL selects for this compression because the smaller model lacks the capacity to maintain both elaborate reasoning <em>and</em> correct structural output simultaneously. By step 90–100, the reasoning reads as a <em>formality</em> rather than a problem-solving step—the model even inserts the parenthetical “(simulated here for brevity)”.
                 </p>
             </div>
 
-            <h3 class="text-2xl font-bold text-indigo-700 dark:text-indigo-400 mt-10 mb-4">2. The "Refinement" Strategy</h3>
-            
+            <p class="mb-6">The keyword data confirms this divergence. In the 230B model, “symmetry” mentions grow from 6.4 per sample at step 0 to <strong>11.3 at step 60</strong>, and Wyckoff positions emerge at step 40+. In the 30B model, “symmetry” starts at 0.6 and reaches <strong>0.0 by step 100</strong>. “Bond” drops from 2.0 to 0.0 by step 60. “Coordination” and “Wyckoff” never appear at any step.</p>
+
+            <h3 class="text-2xl font-bold text-indigo-700 dark:text-indigo-400 mt-10 mb-4">3. The “Bond” Paradox</h3>
+
+            <div class="bg-purple-50 dark:bg-purple-900/20 border-l-4 border-purple-500 dark:border-purple-400 p-6 my-6 rounded-r-lg">
+                <p class="text-purple-900 dark:text-purple-100 mb-3">
+                    The 30B model’s “bond” keyword count drops from <strong>2.0 per sample at step 0 to 0.0 by step 60</strong>—and stays at zero through step 100. On the surface, this looks like the model forgetting about bond lengths.
+                </p>
+                <p class="text-purple-900 dark:text-purple-100">
+                    In reality, the <strong>bond length reward improves from 0.574 to 0.809</strong> over the same period (peaking at 0.818 at step 90). The model’s bond quality gets better while it stops talking about bonds. This is the compression heuristic in action: the concept has been internalized into the structural output itself, removed from the scratchpad. The 30B model learns to <em>do</em> without needing to <em>say</em>. The 230B model does the opposite: bond mentions also decline after step 50, but from a higher baseline and after the model has already peak-loaded its symmetry vocabulary.
+                </p>
+            </div>
+
+            <h3 class="text-2xl font-bold text-indigo-700 dark:text-indigo-400 mt-10 mb-4">4. Conservative Perturbations—Two Very Different Kinds</h3>
+
+            <p class="mb-4">Both models learn to make smaller lattice adjustments over time through step 60. But the degree, pattern, and outcome differ sharply:</p>
+
+            <div class="overflow-x-auto mb-6">
+                <table class="min-w-full text-sm border rounded-lg overflow-hidden">
+                    <thead class="bg-gray-50 dark:bg-gray-800 font-semibold text-gray-700 dark:text-gray-200">
+                        <tr>
+                            <th class="px-4 py-2 text-left">Model</th>
+                            <th class="px-4 py-2 text-center">Δa at Step 0</th>
+                            <th class="px-4 py-2 text-center">Min Δa</th>
+                            <th class="px-4 py-2 text-center">Reduction</th>
+                            <th class="px-4 py-2 text-center">FE score at reward peak</th>
+                        </tr>
+                    </thead>
+                    <tbody class="bg-white dark:bg-gray-900 divide-y divide-gray-200 dark:divide-gray-700 text-gray-700 dark:text-gray-300">
+                        <tr>
+                            <td class="px-4 py-2 font-medium">230B</td>
+                            <td class="px-4 py-2 text-center">0.053 Å</td>
+                            <td class="px-4 py-2 text-center">0.017 Å (step 60)</td>
+                            <td class="px-4 py-2 text-center">−68%</td>
+                            <td class="px-4 py-2 text-center font-bold text-indigo-700 dark:text-indigo-300">0.957 (step 60)</td>
+                        </tr>
+                        <tr class="bg-gray-50 dark:bg-gray-800">
+                            <td class="px-4 py-2 font-medium">30B</td>
+                            <td class="px-4 py-2 text-center">0.025 Å</td>
+                            <td class="px-4 py-2 text-center">0.002 Å (step 90)</td>
+                            <td class="px-4 py-2 text-center">−91%</td>
+                            <td class="px-4 py-2 text-center text-orange-600 dark:text-orange-400">0.658 (step 80)</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <p class="mb-6">The 230B model’s conservatism is <em>healthy</em>: it mirrors real DFT relaxation behavior, correlates with excellent formation energy scores, and notably <strong>rebounds at step 70</strong> (Δa = 0.084 Å)—the model becomes more forceful once it has the structural reasoning to support larger corrections, and bond quality peaks at 0.938 that same step. The 30B model’s conservatism is <em>pathological</em>: modifying the lattice by 0.002 Å is essentially returning the input unchanged. It avoids catastrophic bond-length violations but cannot correct misplaced lattice parameters—hence formation energies that remain 10–20× above the 0.1 eV/atom threshold throughout all 100 steps.</p>
+
+            <h3 class="text-2xl font-bold text-indigo-700 dark:text-indigo-400 mt-10 mb-4">5. Formation Energy: The Capacity Bottleneck</h3>
+
+            <p class="mb-6">The formation energy reward component is where the capacity gap is most visible. The 230B model reaches a formation energy score of <strong>0.957 at step 60</strong> and sustains 0.896 at step 70. The 30B model peaks at <strong>0.658 at step 80</strong> and falls back to 0.283 by step 100—a ~45-percentage-point gap at peak, widening to 61 points by the end of each run.</p>
+
+            <p class="mb-6">In absolute terms, the 30B model’s generated structures have mean formation energies oscillating between 0.93 and 1.86 eV/atom across all steps—<strong>10–20× above the 0.1 eV/atom stability threshold</strong>. The structures pass composition and bond-length checks, but they are not genuinely relaxed. The model has learned to be a competent CIF formatter and a cautious structure perturber, but not a crystal-structure optimizer.</p>
+
+            <h3 class="text-2xl font-bold text-red-700 dark:text-red-400 mt-10 mb-4">6. The Failure Mode: The “Retry” Illusion</h3>
+
             <p class="mb-6">
-                Early in the run, the model treated the input crystals as "wrong," aggressively resizing the lattice by an average of <strong>0.051 Å</strong> per step. This often broke the symmetry and tanked the reward.
-            </p>
-            <p class="mb-8">
-                By Step 80, the model learned a crucial lesson in materials science: <em>Nature prefers local minima.</em> It switched to a micro-optimization strategy, reducing the lattice modification to just <strong>0.006 Å</strong> (an 88% reduction). It learned that the secret to high rewards wasn't reconstruction, but subtle relaxation.
-            </p>
-
-            <h3 class="text-2xl font-bold text-red-700 dark:text-red-400 mt-10 mb-4">3. The Failure Mode: The "Retry" Illusion</h3>
-
-            <p class="mb-6">
-                Here is the kicker, and probably the biggest headache for my defense: <strong>The model does not learn through iteration.</strong>
-            </p>
-
-            <p class="mb-4">
-                I analyzed 37 cases where the first attempt failed (Energy > 0.1 eV/atom).
+                In multi-turn rollouts, when the first attempt fails the energy threshold, the model gets a second turn with the validator’s feedback. Analysis of 37 first-turn failures from the 30B run:
             </p>
             <ul class="list-disc list-inside mb-6 space-y-2 text-gray-700 dark:text-gray-300">
-                <li><strong>Physical Recoveries:</strong> 0. (Not a single case of fixing bad physics).</li>
-                <li><strong>Syntax Recoveries:</strong> 7. (Fixing missing lines in the CIF file).</li>
+                <li><strong>Physical recoveries (energy, forces, bonds):</strong> 0. Zero cases of fixing bad physics.</li>
+                <li><strong>Syntax recoveries (format corrections):</strong> 7. The model can fix a missing CIF line, but not a bad structure.</li>
             </ul>
 
-            <p class="mb-8">
-                When the model receives negative feedback like <em>"Formation energy is too high,"</em> it doesn't know how to calculate a gradient from that text. It treats the second turn as a "re-roll" of the dice, repeating the same logic and hoping for a better random seed. It has learned <strong>State Recognition</strong> (what a good crystal looks like) but not <strong>Gradient Descent</strong> (how to fix a bad one).
+            <p class="mb-6">
+                The model treats scalar feedback (“Formation energy is too high”) as a signal to re-roll rather than to diagnose. It rephrases its reasoning and outputs a near-identical CIF with minor random perturbations. It has learned <strong>state recognition</strong> (what a valid crystal looks like) but not <strong>gradient estimation</strong> (which direction to move atoms to lower energy).
             </p>
 
-            <h3 class="text-2xl font-bold text-indigo-700 dark:text-indigo-400 mt-10 mb-4">4. The Silver Lining: In-Context Calibration</h3>
+            <p class="mb-6">
+                There is one exception: <strong>prediction</strong> improves over turns. Even though the model cannot fix a bad structure, its ability to estimate formation energy from the feedback context improves in the second turn—an “Actor-Critic” disconnect where the Critic (prediction) improves while the Actor (structure generation) stalls.
+            </p>
 
-            <p class="mb-6">
-                However, there is one area where two turns helped: <strong>Prediction</strong>. Even though the model couldn't <em>fix</em> the structure, its ability to <em>predict</em> the formation energy improved significantly in the second turn.
-            </p>
-            <p class="mb-6">
-                This suggests an "Actor-Critic" disconnect. The model can use the ground truth from the first turn to calibrate its internal "zero point" (Critic success), even if it lacks the policy to manipulate the atoms to reach that state (Actor failure).
-            </p>
-            
             <blockquote class="border-l-4 border-gray-300 dark:border-gray-600 pl-4 italic text-gray-600 dark:text-gray-400 my-8 py-2">
-                "The model learns to measure the problem before it learns to fix it."
+                “The model learns to measure the problem before it learns to fix it.”
             </blockquote>
 
             <div class="bg-gray-50 dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 pt-6 mt-8">
-                <p class="font-bold text-gray-900 dark:text-white mb-2">Next Steps:</p>
+                <p class="font-bold text-gray-900 dark:text-white mb-2">What this implies for the next run:</p>
                 <p class="text-gray-700 dark:text-gray-300">
-                    The data implies that simply telling the model "Energy is too high" is useless. I need to implement vector feedback—telling the model exactly <em>which</em> bond is strained—if I want to see true iterative improvement. Back to the cluster.
+                    Scalar feedback (“energy too high”) provides no directional gradient in atom-coordinate space. The path forward is <strong>vector feedback</strong>—per-atom force vectors, specific bond-length violations, which Wyckoff site is strained—so the policy has an actual direction to move. The 230B model shows that with sufficient capacity, RL can induce genuinely calibrated structural reasoning. Whether a 30B model can exploit richer feedback to close the gap, or whether the formation energy bottleneck is a hard capacity limit, is the central open question.
                 </p>
             </div>
 
         </section>
-        <footer class="mt-16 pt-8 border-t border-gray-200 text-center">
+<footer class="mt-16 pt-8 border-t border-gray-200 text-center">
             <h3 class="text-xl font-bold mb-4">Ready to test your agent?</h3>
             <p class="text-gray-600 mb-6">Explore the environment and start training on the Prime Intellect dashboard.</p>
             <a href="https://app.primeintellect.ai/dashboard/environments/jmedina9/crystal_relaxation" 
