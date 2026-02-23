@@ -18,7 +18,35 @@
         table {
             font-size: 0.875rem;
         }
+        img:not([src]), img[src=""], img.missing {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .img-placeholder {
+            background: #f3f4f6;
+            border: 2px dashed #d1d5db;
+            border-radius: 0.5rem;
+            padding: 2rem;
+            text-align: center;
+            color: #9ca3af;
+            font-size: 0.875rem;
+            width: 100%;
+            min-height: 120px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+        }
     </style>
+    <script>
+        function imgFallback(img) {
+            const placeholder = document.createElement('div');
+            placeholder.className = 'img-placeholder';
+            placeholder.innerHTML = '<span style="font-size:1.5rem">&#128440;</span><br><span>' + (img.alt || 'Image not found') + '</span><br><code style="font-size:0.75rem;color:#6b7280">' + img.getAttribute('src') + '</code>';
+            img.parentNode.replaceChild(placeholder, img);
+        }
+    </script>
 </head>
 <body class="bg-gray-50 text-gray-900">
 
@@ -76,9 +104,9 @@
                     </div>
                 </div>
                 <p class="text-gray-700">
-                    <strong>Source:</strong> Materials Project mp-20 database, filtered for thermodynamically 
-                    stable compounds. All structures pre-processed with CHGNet force predictions for efficient 
-                    energy+force fine-tuning.
+                    <strong>Source:</strong> Materials Project mp-20 database (downloaded via HuggingFace:
+                    <a href="https://huggingface.co/datasets/4everStudent/mp-20-relaxation-dataset-with-clusters" class="text-indigo-600 hover:text-indigo-800 underline" target="_blank">4everStudent/mp-20-relaxation-dataset-with-clusters</a>),
+                    filtered for thermodynamically stable compounds (E<sub>f</sub> &lt; 0.1 eV/atom).
                 </p>
             </div>
         </section>
@@ -343,7 +371,8 @@
                             </div>
                         </div>
                         <img src="sweep_results/n2000_bs8_lr0.01_ep10.png" 
-                             alt="Top Configuration" 
+                             alt="Top Configuration: n=2000 bs=8 lr=0.01 ep=10" 
+                             onerror="imgFallback(this)"
                              class="w-full max-w-2xl mx-auto rounded shadow-lg">
                     </div>
 
@@ -357,7 +386,8 @@
                             </div>
                         </div>
                         <img src="sweep_results/n1500_bs16_lr0.01_ep10.png" 
-                             alt="Rank 2 Configuration" 
+                             alt="Rank 2: n=1500 bs=16 lr=0.01 ep=10" 
+                             onerror="imgFallback(this)"
                              class="w-full max-w-2xl mx-auto rounded shadow">
                     </div>
 
@@ -371,7 +401,8 @@
                             </div>
                         </div>
                         <img src="sweep_results/n2000_bs8_lr0.01_ep5.png" 
-                             alt="Rank 3 Configuration" 
+                             alt="Rank 3: n=2000 bs=8 lr=0.01 ep=5" 
+                             onerror="imgFallback(this)"
                              class="w-full max-w-2xl mx-auto rounded shadow">
                     </div>
 
@@ -384,7 +415,8 @@
                                 <p class="text-xs text-gray-600">R²=0.9711, MAE=0.1293 eV/atom</p>
                             </div>
                             <img src="sweep_results/n1500_bs8_lr0.01_ep5.png" 
-                                 alt="Rank 4 Configuration" 
+                                 alt="Rank 4: n=1500 bs=8 lr=0.01 ep=5" 
+                                 onerror="imgFallback(this)"
                                  class="w-full rounded shadow">
                         </div>
                         <div class="bg-gray-50 border border-gray-300 rounded-lg p-4">
@@ -394,7 +426,8 @@
                                 <p class="text-xs text-gray-600">R²=0.9688, MAE=0.1242 eV/atom</p>
                             </div>
                             <img src="sweep_results/n1000_bs16_lr0.01_ep10.png" 
-                                 alt="Rank 5 Configuration" 
+                                 alt="Rank 5: n=1000 bs=16 lr=0.01 ep=10" 
+                                 onerror="imgFallback(this)"
                                  class="w-full rounded shadow">
                         </div>
                     </div>
@@ -429,6 +462,7 @@
                     <div class="bg-white border border-gray-200 rounded-lg p-4">
                         <img src="training_curves/top5_curves.png" 
                              alt="Top 5 Training Curves" 
+                             onerror="imgFallback(this)"
                              class="w-full max-w-4xl mx-auto rounded shadow">
                         <p class="text-sm text-gray-600 text-center mt-3">
                             <strong>Top panel:</strong> Energy MAE progression. <strong>Bottom panel:</strong> Force MAE progression. 
@@ -446,6 +480,7 @@
                         <h4 class="text-base font-semibold text-gray-700 mb-2">Energy MAE</h4>
                         <img src="training_curves/best_per_size_energy.png" 
                              alt="Best Configuration per Dataset Size - Energy" 
+                             onerror="imgFallback(this)"
                              class="w-full max-w-4xl mx-auto rounded shadow">
                         <p class="text-sm text-gray-600 text-center mt-3">
                             Best performing configuration for each dataset size (energy predictions). Larger datasets achieve 
@@ -458,6 +493,7 @@
                         <h4 class="text-base font-semibold text-gray-700 mb-2">Force MAE</h4>
                         <img src="training_curves/best_per_size_force.png" 
                              alt="Best Configuration per Dataset Size - Forces" 
+                             onerror="imgFallback(this)"
                              class="w-full max-w-4xl mx-auto rounded shadow">
                         <p class="text-sm text-gray-600 text-center mt-3">
                             Force prediction accuracy improves significantly with dataset size. Force MAE shows more 
@@ -472,6 +508,7 @@
                     <div class="bg-white border border-gray-200 rounded-lg p-4">
                         <img src="training_curves/lr_comparison.png" 
                              alt="Learning Rate Impact" 
+                             onerror="imgFallback(this)"
                              class="w-full max-w-5xl mx-auto rounded shadow">
                         <p class="text-sm text-gray-600 text-center mt-3">
                             Training dynamics across learning rates for the largest dataset (2000 samples). 

@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>AI for Materials: Crystal Relaxation RL Environment</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <script>
+    <script>                                                                            
         tailwind.config = {
             darkMode: 'class',
         }
@@ -92,9 +92,12 @@
 
         <section class="prose prose-indigo lg:prose-xl dark:prose-invert">
             <p class="text-lg text-gray-700 dark:text-gray-300 mb-6">
-                Finding the stable state of a crystal—a process known as <strong>relaxation</strong>—is the bedrock of modern materials science. 
-                But it’s also a massive computational bottleneck. Today, I'm introducing a new Reinforcement Learning environment 
-                designed to teach agents how to find energy minima autonomously.
+                Finding the stable state of a crystal—a process known as <strong>structural relaxation</strong>—is the bedrock of computational materials science.
+                In density functional theory (DFT), a typical geometry optimization (BFGS or conjugate gradient) requires dozens to hundreds
+                of single-point energy and force evaluations, each solving the Kohn–Sham equations self-consistently at O(N<sup>3</sup>) cost.
+                For high-throughput screening across thousands of candidate structures, this is prohibitive.
+                This project asks: can a language model, trained with reinforcement learning, learn to propose relaxed structures
+                in a <em>single forward pass</em>—replacing the entire iterative SCF loop?
             </p>
 
             <h2 class="text-2xl font-bold mt-10 mb-4">The Challenge: The Energy Landscape</h2>
@@ -113,7 +116,6 @@
                 <li><strong>A</strong>: A new CIF string output by the LLM (atomic displacements + optional lattice strain)</li>
                 <li><strong>T</strong>: Deterministic—the next state is exactly the CIF the agent outputs, parsed and re-evaluated</li>
                 <li><strong>R</strong>: Weighted rubric score from CHGNet (energy, forces, bond lengths, composition, format)</li>
-                <li><strong>γ</strong>: Discount factor; set to 1.0 in single-turn, 0.95 in multi-turn rollouts</li>
             </ul>
 
             <div class="bg-indigo-50 dark:bg-indigo-900/20 border-l-4 border-indigo-500 p-6 my-8 rounded-r-lg">
@@ -129,9 +131,9 @@
             <h2 class="text-2xl font-bold mt-10 mb-4">The Dataset</h2>
             <p class="mb-6">
                 The training environment uses a curated subset of the <strong>Materials Project mp-20</strong> benchmark [3], 
-                originally compiled by Chen et al. (2021) and re-released by Microsoft as part of MatterGen 
-                (<a href="https://github.com/microsoft/mattergen/tree/main/data-release" class="text-indigo-600 hover:underline" target="_blank" rel="noopener">data-release</a>).
-                MP-20 contains ~45,000 experimentally reported inorganic crystal structures with up to 20 atoms per unit cell, 
+                originally compiled by Chen et al. (2021). The dataset is downloaded directly from HuggingFace:
+                <a href="https://huggingface.co/datasets/4everStudent/mp-20-relaxation-dataset-with-clusters" class="text-indigo-600 hover:underline" target="_blank" rel="noopener">4everStudent/mp-20-relaxation-dataset-with-clusters</a>.
+                MP-20 contains ~45,000 experimentally reported inorganic crystal structures with up to 20 atoms per unit cell,
                 spanning 89 elements across the periodic table.
             </p>
             <p class="mb-6">
@@ -503,6 +505,9 @@ else:
                 <h3 class="text-lg font-bold mb-3">⚗️ Composition Rubric (Weight: 0.15)</h3>
                 <p class="mb-4 text-gray-700 dark:text-gray-300">
                     Verifies that the generated structure has the correct chemical composition in the right ratios.
+                    This rubric serves <strong>two distinct roles</strong>:
+                    (1) it provides an <strong>easy gradient signal early in training</strong>, when the model is too weak to consistently pass the stability rubrics—preventing the policy from receiving zero reward on every step;
+                    and (2) it acts as an <strong>anti-reward-hacking mechanism</strong>, ensuring the agent cannot achieve high scores by memorizing a single simple crystal that passes energy/force thresholds regardless of the requested composition.
                 </p>
                 
                 <div class="bg-green-50 dark:bg-green-900/40 border-l-4 border-green-500 dark:border-green-700 p-4 mb-4">
@@ -525,8 +530,8 @@ else:
     reward = 0.0</code></pre>
                 
                 <p class="text-gray-700 dark:text-gray-300">
-                    <strong>Why it matters:</strong> The chemical composition fundamentally determines material properties. 
-                    An agent that generates NaCl₂ instead of NaCl has failed at a basic chemistry level.
+                    <strong>Why it matters:</strong> The chemical composition fundamentally determines material properties—an agent that generates NaCl₂ instead of NaCl has failed at a basic chemistry level.
+                    Keeping weight low (0.15 vs. 0.60 for energy) prevents the agent from gaming composition alone, but non-zero weight ensures the rubric provides early training signal before the harder stability objectives become reachable.
                 </p>
             </div>
             
@@ -786,8 +791,10 @@ else:
             </ul>
 
             <h3 class="text-xl font-bold mt-8 mb-4">Quickstart</h3>
-            <p class="mb-3">1. Start the evaluation server (preferably in a background terminal or tmux pane):</p>
+            <p class="mb-3">1. The CHGNet inference server is <strong>initialized automatically</strong> when the environment starts. If <code>tmux</code> is available, it launches in a background pane on port 1111 using FastAPI (<code>uvicorn</code>). If tmux is unavailable, it falls back to an in-process CPU call. To start manually:</p>
             <pre class="bg-gray-900 text-gray-100 p-4 rounded-lg overflow-x-auto text-sm mb-4"><code>export CHGNET_PATH="./crystal_relaxation/finetuned_chgnet_model.pth"
+# Auto-launched via tmux (if available) on port 1111, or in-process CPU fallback
+# To start manually:
 uvicorn crystal_relaxation.server:app --host 0.0.0.0 --port 1111</code></pre>
             
             <p class="mb-3">2. Run an evaluation using <code>vf-eval</code>:</p>
@@ -960,40 +967,17 @@ uvicorn crystal_relaxation.server:app --host 0.0.0.0 --port 1111</code></pre>
             <h2 class="text-2xl font-bold mt-10 mb-4">⚠️ What Didn't Work</h2>
             <div class="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-6 mb-6">
                 <p class="text-gray-700 dark:text-gray-300 italic mb-5">
-                    These are the failure modes discovered during development—documented so others don't repeat them.
+                    These are the failure modes discovered during development—documented so others don’t repeat them.
                 </p>
                 
                 <div class="space-y-6 text-gray-700 dark:text-gray-300">
                     <div>
-                        <h4 class="font-bold text-red-800 dark:text-red-300 mb-1">1. Fine-tuning CHGNet with forces from the pretrained model as pseudo-labels</h4>
-                        <p class="text-sm">To avoid the cost of re-computing forces from the Materials Project API for all 2,000 training structures, 
-                        I initially used CHGNet's own <code>predict_structure()["f"]</code> as force labels. 
-                        This creates a circular self-distillation loop—the model is fine-tuned to reproduce its own predictions, 
-                        which removes any signal from real DFT forces. The result was a model with near-zero force MAE on the training set 
-                        but the same energy MAE as baseline on the test set. The fix: train on energy targets only when DFT forces are unavailable, 
-                        or fetch real forces from the MP API.</p>
+                        <h4 class="font-bold text-red-800 dark:text-red-300 mb-1">1. Equal weighting of composition and stability rewards leads to reward hacking</h4>
+                        <p class="text-sm">In an early version of the reward function, composition and formation energy rubrics were given equal weight (~0.40 each). The agent quickly discovered it could achieve consistently high rewards by memorizing a single structurally simple crystal (e.g., a binary oxide with symmetric Wyckoff positions) that reliably scores well on both metrics regardless of the target composition. This is a failure mode unique to multi-objective reward design: the agent exploits the easiest rubric to compensate for failing the harder one. The fix was to make composition a low-weight auxiliary signal (0.15) while keeping it non-zero—low enough that the policy cannot hack it alone, but high enough to provide gradient signal early in training when the model is too weak to pass the stability rubric. The current weighting (60% energy, 24% forces, 15% composition, 10% format, 15% bonds) was tuned to prevent this collapse.</p>
                     </div>
                     <div>
-                        <h4 class="font-bold text-red-800 dark:text-red-300 mb-1">2. Scalar "energy too high" feedback produces no iterative improvement</h4>
-                        <p class="text-sm">Analysis of 37 failed first-turn rollouts showed zero recoveries on the physics rubrics (energy, forces, bond lengths) 
-                        in the second turn. The model rephrases its reasoning but outputs a nearly identical CIF with minor random perturbations. 
-                        Scalar reward feedback gives no directional gradient in structure space—the LLM cannot invert the reward to figure out 
-                        which atom to move and in which direction.</p>
-                    </div>
-                    <div>
-                        <h4 class="font-bold text-red-800 dark:text-red-300 mb-1">3. High learning rate (1e-2) with Adam caused reward collapse after Step 80</h4>
-                        <p class="text-sm">Training at lr = 1e-2 produced the best rewards around Step 80, but then sharply degraded. 
-                        Post-hoc analysis revealed the policy was overfitting to the top-performing structural motifs in the 
-                        training batch—a mode collapse pattern common in GRPO/PPO without KL regularization. 
-                        Adding a KL penalty against the reference policy (β = 0.01) stabilized training past Step 100.</p>
-                    </div>
-                    <div>
-                        <h4 class="font-bold text-red-800 dark:text-red-300 mb-1">4. Using <code>CrystalNN</code> for bond detection in the reward loop is too slow</h4>
-                        <p class="text-sm">The bond lengths rubric uses pymatgen's <code>CrystalNN</code> to identify bonded neighbors, 
-                        which triggers a VoronoiNN computation for every structure. At batch size 8 with 8 rollouts per prompt, 
-                        this added ~4 seconds per reward call on CPU. Switching to a simple cutoff-radius neighbor search 
-                        (r &lt; 1.5 × (r<sub>i</sub> + r<sub>j</sub>)) reduced rubric evaluation to &lt;0.3 seconds 
-                        with negligible accuracy loss.</p>
+                        <h4 class="font-bold text-red-800 dark:text-red-300 mb-1">2. Loading CHGNet directly on GPU workers causes out-of-memory (OOM) errors</h4>
+                        <p class="text-sm">In the initial setup, the CHGNet model was loaded inside each reward function call on the same GPU running the LLM policy. With 8 rollouts per prompt and the LLM already consuming most of the GPU VRAM, loading CHGNet (&gt;500 MB) on-device pushed the process over the memory limit and triggered CUDA OOM errors mid-rollout. The fix was to serve CHGNet as a separate FastAPI microservice (<code>uvicorn</code> on a dedicated port), so reward computation runs on CPU in isolation. The environment now auto-detects tmux and launches the server in a background pane on port 1111 by default; if tmux is unavailable, it falls back to a subprocess call on CPU. This decoupling also makes the reward function stateless and independently testable.</p>
                     </div>
                 </div>
             </div>
@@ -1011,11 +995,10 @@ uvicorn crystal_relaxation.server:app --host 0.0.0.0 --port 1111</code></pre>
             </header>
 
             <p class="text-lg text-gray-700 dark:text-gray-300 mb-6">
-                I’ve spent the last week parsing the logs from the latest GRPO training run (<code>run_id: wwre3g...</code>), and the results are honestly proving to interesting, with some evidence of  a "cognitive shift."
-            </p>
+                I’ve spent the last week parsing the logs from the latest GRPO training run (<code>run_id: wwre3g...</code>), and the results are proving to be genuinely interesting—the model shows clear evidence of a behavioral phase transition across training steps.</p>
 
             <p class="mb-8">
-                Over the course of 100 training steps, the model didn't just get "better" at the reward function. It went from checking arithmetic to a "confident computational" scientist running simulations.
+                Over 100 training steps, the model didn't simply improve its reward monotonically. Its reasoning strategy underwent a qualitative shift: early steps show explicit coordinate arithmetic while later steps exhibit emergent simulation-like behavior, with the model invoking DFT methodology it was never explicitly trained on.
             </p>
 
             <h3 class="text-2xl font-bold text-indigo-700 dark:text-indigo-400 mt-10 mb-4">1. The Cognitive Shift: From Calculator to Simulator</h3>
