@@ -855,11 +855,15 @@ else:
                 <div class="space-y-6 text-gray-700 dark:text-gray-300">
                     <div>
                         <h4 class="font-bold text-red-800 dark:text-red-300 mb-1">1. Equal weighting of composition and stability rewards leads to reward hacking</h4>
-                        <p class="text-sm">In an early version of the reward function, composition and formation energy rubrics were given equal weight (~0.40 each). The agent quickly discovered it could achieve consistently high rewards by memorizing a single structurally simple crystal (e.g., a binary oxide with symmetric Wyckoff positions) that reliably scores well on both metrics regardless of the target composition. This is a failure mode unique to multi-objective reward design: the agent exploits the easiest rubric to compensate for failing the harder one. The fix was to make composition a low-weight auxiliary signal (0.15) while keeping it non-zero—low enough that the policy cannot hack it alone, but high enough to provide gradient signal early in training when the model is too weak to pass the stability rubric. The current weighting (60% energy, 24% forces, 15% composition, 10% format, 15% bonds) was tuned to prevent this collapse.</p>
+                        <p class="text-sm">In an early version of the reward function, composition and formation energy rubrics were given equal weight (~0.40 each). The agent, at different stages of training, would discover that it could achieve consistently higher rewards by memorizing a single structurally simple crystal—a binary oxide with symmetric Wyckoff positions or a bi-metallic crystal—that reliably scores well on stability metrics. This promoted laziness: instead of trying to comply with composition constraints, the model would just output an easy structure. Once this pattern was discovered, the model quickly degenerated from shorter to almost non-existent reasoning trajectories. The fix was to decrease the importance of the composition rubric while keeping it non-zero: low enough that the policy is not rewarded enough to make quick, undesired reward gains, but high enough to provide gradient signal early in training when the model is too weak to pass the stability rubric.</p>
                     </div>
                     <div>
-                        <h4 class="font-bold text-red-800 dark:text-red-300 mb-1">2. Loading CHGNet directly on GPU workers causes out-of-memory (OOM) errors</h4>
-                        <p class="text-sm">In the initial setup, the CHGNet model was loaded inside each reward function call on the same GPU running the LLM policy. With 8 rollouts per prompt and the LLM already consuming most of the GPU VRAM, loading CHGNet (&gt;500 MB) on-device pushed the process over the memory limit and triggered CUDA OOM errors mid-rollout. The fix was to serve CHGNet as a separate FastAPI microservice (<code>uvicorn</code> on a dedicated port), so reward computation runs on CPU in isolation. The environment now auto-detects tmux and launches the server in a background pane on port 1111 by default; if tmux is unavailable, it falls back to a subprocess call on CPU. This decoupling also makes the reward function stateless and independently testable.</p>
+                        <h4 class="font-bold text-red-800 dark:text-red-300 mb-1">2. Redundant rubrics increase variance without improving performance</h4>
+                        <p class="text-sm">The environment originally used both a force rubric and a formation energy rubric to check validity and stability. Both were intended to provide complementary signals about why generation was failing, thereby improving training. In practice, performance never improved when both were active. Our hypothesis is that including both rubrics increased reward variance to the point that it was harder for the model to get gradient updates in the right direction—the signals partially cancelled rather than reinforced.</p>
+                    </div>
+                    <div>
+                        <h4 class="font-bold text-red-800 dark:text-red-300 mb-1">3. Multi-turn feedback is a re-roll signal, not a repair signal</h4>
+                        <p class="text-sm">In multi-turn rollouts, we expected the model to use feedback from a failed first attempt to diagnose and correct structural deficiencies. Across 37 first-turn failures from the 30B run, there were <strong>zero physical recoveries</strong>—no corrections to formation energy, forces, or bond lengths. Seven cases showed syntactic recoveries (fixing a malformed CIF tag), but the model treated scalar feedback like "Formation energy is too high" as a cue to re-roll rather than to diagnose. It rephrases its chain-of-thought reasoning and outputs a near-identical structure with minor random perturbations. The model can repair a broken file; it cannot repair a bad structure.</p>
                     </div>
                 </div>
             </div>
@@ -1015,19 +1019,19 @@ else:
             <h3 class="text-2xl font-bold text-red-700 dark:text-red-400 mt-10 mb-4">6. The Failure Mode: The “Retry” Illusion</h3>
 
             <p class="mb-6">
-                In multi-turn rollouts, when the first attempt fails the energy threshold, the model gets a second turn with the validator’s feedback. Analysis of 37 first-turn failures from the 30B run:
+                In multi-turn rollouts, when the first attempt fails the energy or the bond-length heuristic threshold, the model receives feedback and gets a second turn. We expected the model to use this feedback to diagnose and correct structural deficiencies. In practice, weak models show little evidence of their usefulness. Analysis of 37 first-turn failures from the 30B run:
             </p>
             <ul class="list-disc list-inside mb-6 space-y-2 text-gray-700 dark:text-gray-300">
-                <li><strong>Physical recoveries (energy, forces, bonds):</strong> 0. Zero cases of fixing bad physics.</li>
-                <li><strong>Syntax recoveries (format corrections):</strong> 7. The model can fix a missing CIF line, but not a bad structure.</li>
+                <li><strong>Physical recoveries (energy, forces, bonds):</strong> 0. Zero cases where the model corrected formation energy, forces, or bond lengths.</li>
+                <li><strong>Syntax recoveries (format corrections):</strong> 7 of 37. The model fixed a missing CIF line or formatting issue—it can repair a broken file, but not a bad structure.</li>
             </ul>
 
             <p class="mb-6">
-                The model treats scalar feedback (“Formation energy is too high”) as a signal to re-roll rather than to diagnose. It rephrases its reasoning and outputs a near-identical CIF with minor random perturbations. It has learned <strong>state recognition</strong> (what a valid crystal looks like) but not <strong>gradient estimation</strong> (which direction to move atoms to lower energy).
+                The model treats scalar feedback (“Formation energy is too high”) as a signal to re-roll rather than to diagnose. It rephrases its chain-of-thought reasoning and outputs a near-identical CIF with minor random perturbations, having learned <strong>state recognition</strong> (what a valid crystal looks like) but not <strong>gradient estimation</strong> (how to move atoms toward lower energy).
             </p>
 
             <p class="mb-6">
-                There is one exception: <strong>prediction</strong> improves over turns. Even though the model cannot fix a bad structure, its ability to estimate formation energy from the feedback context improves in the second turn—an “Actor-Critic” disconnect where the Critic (prediction) improves while the Actor (structure generation) stalls.
+                On the positive side, inclusion of quantitative feedback about the formation energy improves the model’s <em>predictive</em> capabilities. Although it cannot fix a bad structure, when tasked to predict the formation energy, its performance improves significantly across turns—an “Actor-Critic” disconnect where the Critic (prediction) improves while the Actor (structure generation) stalls.
             </p>
 
             <blockquote class="border-l-4 border-gray-300 dark:border-gray-600 pl-4 italic text-gray-600 dark:text-gray-400 my-8 py-2">
