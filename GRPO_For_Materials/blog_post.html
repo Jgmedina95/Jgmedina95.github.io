@@ -796,55 +796,6 @@ else:
                 </li>
             </ol>
 
-            <h2 class="text-2xl font-bold mt-10 mb-4">References</h2>
-            <div class="bg-gray-50 border border-gray-200 rounded-lg p-6 mb-6">
-                <ol class="space-y-4 text-sm text-gray-700">
-                    <li>
-                        <strong>[1] CHGNet:</strong> Deng, B., Zhong, P., Jun, K., Riebesell, J., Han, K., Bartel, C. J., & Ceder, G. (2023). 
-                        <em>CHGNet as a pretrained universal neural network potential for charge-informed atomistic modelling.</em> 
-                        Nature Machine Intelligence, 5(9), 1031-1041. 
-                        <a href="https://doi.org/10.1038/s42256-023-00716-3" class="text-indigo-600 hover:text-indigo-800">doi:10.1038/s42256-023-00716-3</a>
-                    </li>
-                    <li>
-                        <strong>[2] Materials Project:</strong> Jain, A., Ong, S. P., Hautier, G., Chen, W., Richards, W. D., Dacek, S., ... & Persson, K. A. (2013). 
-                        <em>Commentary: The Materials Project: A materials genome approach to accelerating materials innovation.</em> 
-                        APL Materials, 1(1), 011002. 
-                        <a href="https://doi.org/10.1063/1.4812323" class="text-indigo-600 hover:text-indigo-800">doi:10.1063/1.4812323</a>
-                    </li>
-                    <li>
-                        <strong>[3] MP-20 Dataset:</strong> Chen, C., Zuo, Y., Ye, W., Li, X., & Ong, S. P. (2021). 
-                        <em>Learning properties of ordered and disordered materials from multi-fidelity data.</em> 
-                        Nature Computational Science, 1(1), 46-53. 
-                        <a href="https://doi.org/10.1038/s43588-020-00002-x" class="text-indigo-600 hover:text-indigo-800">doi:10.1038/s43588-020-00002-x</a>
-                    </li>
-                    <li>
-                        <strong>[4] Formation Energy Threshold:</strong> The 0.1 eV/atom threshold for thermodynamic stability is based on commonly accepted criteria in computational materials science. 
-                        See: Sun, W., Bartel, C. J., Arca, E., Bauers, S. R., Matthews, B., Orvañanos, B., ... & Toney, M. F. (2019). 
-                        <em>A map of the inorganic ternary metal nitrides.</em> 
-                        Nature Materials, 18(7), 732-739.
-                    </li>
-                    <li>
-                        <strong>[5] Graph Neural Networks for Materials:</strong> Xie, T., & Grossman, J. C. (2018). 
-                        <em>Crystal graph convolutional neural networks for an accurate and interpretable prediction of material properties.</em> 
-                        Physical Review Letters, 120(14), 145301.
-                    </li>
-                    <li>
-                        <strong>[6] Reinforcement Learning for Science:</strong> The application of RL to scientific domains draws inspiration from: 
-                        Degrave, J., et al. (2022). 
-                        <em>Magnetic control of tokamak plasmas through deep reinforcement learning.</em> 
-                        Nature, 602(7897), 414-419.
-                    </li>
-                </ol>
-            </div>
-
-            <div class="bg-indigo-50 border-l-4 border-indigo-500 p-4 rounded-r-lg mb-6">
-                <p class="text-indigo-900 text-sm">
-                    <strong>📚 Implementation Note:</strong> Training hyperparameters (batch size, learning rate, epochs) 
-                    and rubric weights were adapted from CHGNet's original training protocol and empirically tuned for 
-                    the RL environment. The formation energy threshold and bond length tolerances follow standard practices 
-                    in computational materials discovery.
-                </p>
-            </div>
 
             <h2 class="text-2xl font-bold mt-10 mb-4">⚠️ What Didn't Work</h2>
             <div class="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-6 mb-6">
@@ -1042,6 +993,73 @@ else:
                 <p class="font-bold text-gray-900 dark:text-white mb-2">What this implies for the next run:</p>
                 <p class="text-gray-700 dark:text-gray-300">
                     Scalar feedback (“energy too high”) provides no directional gradient in atom-coordinate space. The path forward is <strong>vector feedback</strong>—per-atom force vectors, specific bond-length violations, which Wyckoff site is strained—so the policy has an actual direction to move. The 230B model shows that with sufficient capacity, RL can induce genuinely calibrated structural reasoning. Whether a 30B model can exploit richer feedback to close the gap, or whether the formation energy bottleneck is a hard capacity limit, is the central open question.
+                </p>
+            </div>
+
+
+            <h2 class="text-3xl font-bold text-gray-900 dark:text-white mt-16 mb-6">What’s Next</h2>
+            <p class="mb-6 text-gray-700 dark:text-gray-300">Several directions are worth pursuing from here:</p>
+            <div class="space-y-6 mb-10">
+                <div class="bg-gray-50 dark:bg-gray-800 rounded-lg p-5 border-l-4 border-indigo-500">
+                    <h4 class="font-bold text-gray-900 dark:text-white mb-1">Benchmarks</h4>
+                    <p class="text-sm text-gray-700 dark:text-gray-300">A systematic benchmark comparing GRPO-trained LLMs against diffusion-based generative models (CDVAE, DiffCSP) and classical basin-hopping on the MP-20 test split, using formation energy, structural validity rate, and composition accuracy as evaluation axes.</p>
+                </div>
+                <div class="bg-gray-50 dark:bg-gray-800 rounded-lg p-5 border-l-4 border-red-500">
+                    <h4 class="font-bold text-gray-900 dark:text-white mb-1">Exploration of Reward Hacking Mechanisms</h4>
+                    <p class="text-sm text-gray-700 dark:text-gray-300">The composition-hacking failure mode we observed is one instance of a broader class. Systematic probing—varying rubric weights, model sizes, and training steps—could map the reward landscape that RL policies exploit, informing more robust multi-objective reward design for scientific tasks.</p>
+                </div>
+                <div class="bg-gray-50 dark:bg-gray-800 rounded-lg p-5 border-l-4 border-green-500">
+                    <h4 class="font-bold text-gray-900 dark:text-white mb-1">Dynamic Rewards</h4>
+                    <p class="text-sm text-gray-700 dark:text-gray-300">Static rubric weights can be gamed once the policy identifies the easiest path. Adaptive reward schedules—annealing the composition weight down as stability improves, or automatically reweighting based on which rubric is currently the bottleneck—could keep the gradient signal aligned with actual learning progress throughout training.</p>
+                </div>
+            </div>
+            <h2 class="text-2xl font-bold mt-10 mb-4">References</h2>
+            <div class="bg-gray-50 border border-gray-200 rounded-lg p-6 mb-6">
+                <ol class="space-y-4 text-sm text-gray-700">
+                    <li>
+                        <strong>[1] CHGNet:</strong> Deng, B., Zhong, P., Jun, K., Riebesell, J., Han, K., Bartel, C. J., & Ceder, G. (2023). 
+                        <em>CHGNet as a pretrained universal neural network potential for charge-informed atomistic modelling.</em> 
+                        Nature Machine Intelligence, 5(9), 1031-1041. 
+                        <a href="https://doi.org/10.1038/s42256-023-00716-3" class="text-indigo-600 hover:text-indigo-800">doi:10.1038/s42256-023-00716-3</a>
+                    </li>
+                    <li>
+                        <strong>[2] Materials Project:</strong> Jain, A., Ong, S. P., Hautier, G., Chen, W., Richards, W. D., Dacek, S., ... & Persson, K. A. (2013). 
+                        <em>Commentary: The Materials Project: A materials genome approach to accelerating materials innovation.</em> 
+                        APL Materials, 1(1), 011002. 
+                        <a href="https://doi.org/10.1063/1.4812323" class="text-indigo-600 hover:text-indigo-800">doi:10.1063/1.4812323</a>
+                    </li>
+                    <li>
+                        <strong>[3] MP-20 Dataset:</strong> Chen, C., Zuo, Y., Ye, W., Li, X., & Ong, S. P. (2021). 
+                        <em>Learning properties of ordered and disordered materials from multi-fidelity data.</em> 
+                        Nature Computational Science, 1(1), 46-53. 
+                        <a href="https://doi.org/10.1038/s43588-020-00002-x" class="text-indigo-600 hover:text-indigo-800">doi:10.1038/s43588-020-00002-x</a>
+                    </li>
+                    <li>
+                        <strong>[4] Formation Energy Threshold:</strong> The 0.1 eV/atom threshold for thermodynamic stability is based on commonly accepted criteria in computational materials science. 
+                        See: Sun, W., Bartel, C. J., Arca, E., Bauers, S. R., Matthews, B., Orvañanos, B., ... & Toney, M. F. (2019). 
+                        <em>A map of the inorganic ternary metal nitrides.</em> 
+                        Nature Materials, 18(7), 732-739.
+                    </li>
+                    <li>
+                        <strong>[5] Graph Neural Networks for Materials:</strong> Xie, T., & Grossman, J. C. (2018). 
+                        <em>Crystal graph convolutional neural networks for an accurate and interpretable prediction of material properties.</em> 
+                        Physical Review Letters, 120(14), 145301.
+                    </li>
+                    <li>
+                        <strong>[6] Reinforcement Learning for Science:</strong> The application of RL to scientific domains draws inspiration from: 
+                        Degrave, J., et al. (2022). 
+                        <em>Magnetic control of tokamak plasmas through deep reinforcement learning.</em> 
+                        Nature, 602(7897), 414-419.
+                    </li>
+                </ol>
+            </div>
+
+            <div class="bg-indigo-50 border-l-4 border-indigo-500 p-4 rounded-r-lg mb-6">
+                <p class="text-indigo-900 text-sm">
+                    <strong>📚 Implementation Note:</strong> Training hyperparameters (batch size, learning rate, epochs) 
+                    and rubric weights were adapted from CHGNet's original training protocol and empirically tuned for 
+                    the RL environment. The formation energy threshold and bond length tolerances follow standard practices 
+                    in computational materials discovery.
                 </p>
             </div>
 
