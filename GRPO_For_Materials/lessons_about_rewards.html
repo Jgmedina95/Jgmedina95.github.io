@@ -1,0 +1,528 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lessons from Designing Rewards for Crystal Generation</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+        }
+    </script>
+    <style>
+        .gradient-text {
+            background: linear-gradient(90deg, #4f46e5, #06b6d4);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        /* Toggle Switch */
+        .theme-switch { display: inline-block; height: 24px; position: relative; width: 44px; margin-right: 1rem; }
+        .theme-switch input { display:none; }
+        .slider { background-color: #ccc; bottom: 0; cursor: pointer; left: 0; position: absolute; right: 0; top: 0; transition: .4s; border-radius: 34px; }
+        .slider:before { background-color: #fff; bottom: 3px; content: ""; height: 18px; left: 3px; position: absolute; transition: .4s; width: 18px; border-radius: 50%; }
+        input:checked + .slider { background-color: #4f46e5; }
+        input:checked + .slider:before { transform: translateX(20px); }
+
+        .lesson-card {
+            border-left: 4px solid;
+            border-radius: 0 0.5rem 0.5rem 0;
+        }
+    </style>
+</head>
+<body class="bg-gray-50 text-gray-900 font-sans leading-relaxed dark:bg-gray-900 dark:text-gray-100 transition-colors duration-200">
+
+    <header class="bg-white border-b sticky top-0 z-50 dark:bg-gray-900 dark:border-gray-800 transition-colors duration-200">
+        <div class="max-w-4xl mx-auto px-4 py-4 flex justify-between items-center">
+            <span class="font-bold text-xl tracking-tight dark:text-white">RL Crystal Generation</span>
+            <div class="flex items-center">
+                <label class="theme-switch" aria-label="Toggle Dark Mode">
+                    <input type="checkbox" id="theme-toggle" />
+                    <span class="slider"></span>
+                </label>
+                <a href="blog_post.html"
+                   class="bg-indigo-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-indigo-700 transition">
+                   ← Back to Main Post
+                </a>
+            </div>
+        </div>
+    </header>
+
+    <main class="max-w-3xl mx-auto px-6 py-12">
+
+        <header class="mb-12">
+            <h1 class="text-4xl md:text-5xl font-extrabold mb-4 leading-tight">
+                Lessons from Designing Rewards<br>
+                <span class="gradient-text">for Crystal Generation</span>
+            </h1>
+            <p class="text-lg text-gray-500 dark:text-gray-400 mb-4">
+                What months of failed training runs actually taught me about reward shaping.
+            </p>
+            <div class="flex items-center text-gray-500 text-sm flex-wrap gap-2">
+                <span>By jmedina9</span>
+                <span class="mx-1">•</span>
+                <span>10 min read</span>
+                <span class="mx-1">•</span>
+                <span class="bg-orange-100 text-orange-700 dark:bg-orange-900/40 dark:text-orange-300 px-2 py-0.5 rounded">Reward Design</span>
+                <span class="bg-indigo-100 text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-300 px-2 py-0.5 rounded">RL</span>
+                <span class="bg-teal-100 text-teal-700 dark:bg-teal-900/40 dark:text-teal-300 px-2 py-0.5 rounded">Materials Science</span>
+            </div>
+        </header>
+
+        <section class="prose prose-indigo lg:prose-xl dark:prose-invert max-w-none">
+
+            <!-- Intro -->
+            <p class="text-lg text-gray-700 dark:text-gray-300 mb-6">
+                It has long been known that constructing a reward function on top of an environment, such that a desired objective is learned, is a non-trivial task. Among the many problems that arise, <strong>reward hacking</strong> stands out the most due to its catastrophic results and its tendency to appear where you least expect it.
+            </p>
+            <p class="text-gray-700 dark:text-gray-300 mb-6">
+                Why is it so hard? In my experience, the root cause is that you start with an objective that is inherently difficult to define precisely: <em>"What is a clean room? What is a good poem? What is a stable crystal?"</em> Beyond that, the limitations of your design are impossible to predict in advance; they only surface after training has already revealed the gaps. This is compounded by the model itself: when a model is not capable enough to reliably satisfy a well-defined reward, the reward designer is forced to make strategic tradeoffs between training longer, running faster iterations with tweaked rewards, or restructuring the reward entirely.
+            </p>
+            <p class="text-gray-700 dark:text-gray-300 mb-8">
+                What follows are five concrete lessons I learned while designing the reward function for crystal generation using GRPO on 0.5–8B parameter models. Some of these lessons emerged quickly; others only became clear after watching hundreds of failed rollouts. All of them are grounded in specific failures from the crystal generation task.
+            </p>
+
+            <!-- Five Lessons Summary Box -->
+            <div class="bg-gradient-to-r from-indigo-50 to-cyan-50 dark:from-indigo-900/40 dark:to-cyan-900/40 border-2 border-indigo-300 dark:border-indigo-700 rounded-xl p-6 mb-10">
+                <h2 class="text-xl font-bold text-indigo-900 dark:text-indigo-100 mb-4">Five Lessons at a Glance</h2>
+                <div class="space-y-3">
+                    <div class="flex items-start gap-3">
+                        <span class="text-2xl leading-none mt-0.5">1️⃣</span>
+                        <div>
+                            <span class="font-bold text-indigo-900 dark:text-indigo-100">Rubric-style rewards &gt; gated rewards.</span>
+                            <span class="text-indigo-800 dark:text-indigo-200 text-sm ml-1">Each sub-goal should be scored independently; never let failure on one silently zero out the rest.</span>
+                        </div>
+                    </div>
+                    <div class="flex items-start gap-3">
+                        <span class="text-2xl leading-none mt-0.5">2️⃣</span>
+                        <div>
+                            <span class="font-bold text-indigo-900 dark:text-indigo-100">Avoid negative rewards.</span>
+                            <span class="text-indigo-800 dark:text-indigo-200 text-sm ml-1">Punishing a model for failure teaches avoidance, not correction, and can collapse training into a local optimum immediately.</span>
+                        </div>
+                    </div>
+                    <div class="flex items-start gap-3">
+                        <span class="text-2xl leading-none mt-0.5">3️⃣</span>
+                        <div>
+                            <span class="font-bold text-indigo-900 dark:text-indigo-100">More reward terms → harder to control training.</span>
+                            <span class="text-indigo-800 dark:text-indigo-200 text-sm ml-1">Exponential growth in distinct reward signals creates unexpected emergent policies.</span>
+                        </div>
+                    </div>
+                    <div class="flex items-start gap-3">
+                        <span class="text-2xl leading-none mt-0.5">4️⃣</span>
+                        <div>
+                            <span class="font-bold text-indigo-900 dark:text-indigo-100">Continuous rewards improve training over binary ones.</span>
+                            <span class="text-indigo-800 dark:text-indigo-200 text-sm ml-1">When the metric is continuous, preserve that signal; dense gradients improve learning efficiency.</span>
+                        </div>
+                    </div>
+                    <div class="flex items-start gap-3">
+                        <span class="text-2xl leading-none mt-0.5">5️⃣</span>
+                        <div>
+                            <span class="font-bold text-indigo-900 dark:text-indigo-100">Always ask: what is the path of least resistance?</span>
+                            <span class="text-indigo-800 dark:text-indigo-200 text-sm ml-1">Before you finalize a reward, ask how a perfectly rational, lazily optimal agent would game it.</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ─────────────────────────────────────────── -->
+            <h2 class="text-2xl font-bold mt-12 mb-4">Why This Matters for Crystal Generation Specifically</h2>
+            <p class="text-gray-700 dark:text-gray-300 mb-4">
+                This is really an issue of model capability. If the models I was using were sufficiently powerful, a simple binary reward (<em>is the crystal stable or not?</em>) would be enough. But at the scales tested (0.5–8B parameters), they simply are not. Even the original DeepSeek paper included a lightweight <em>format</em> reward term rather than discarding any response that lacked proper formatting, because a model that can't yet produce valid outputs still needs a gradient signal to learn from.
+            </p>
+            <p class="text-gray-700 dark:text-gray-300 mb-8">
+                Crystal structure generation adds further difficulty: the problem is highly underdetermined (many valid CIFs exist for a given composition), the evaluation oracle (CHGNet) has its own noise floor, and there is no natural language description of what a "slightly better" crystal looks like. Every lesson below was hard-won from the specific constraints of this task.
+            </p>
+
+            <!-- ─────────────────────────────────────────── -->
+            <h2 class="text-2xl font-bold mt-10 mb-2">Lesson 1: Rubric-Style Rewards Beat Gated Rewards</h2>
+            <div class="bg-teal-50 dark:bg-teal-900/20 border-l-4 border-teal-500 dark:border-teal-600 rounded-r-lg p-5 mb-6">
+                <p class="text-teal-900 dark:text-teal-100 font-medium">
+                    A gated reward, where failing one check returns 0 for everything, throws away the most valuable training signal: partially correct outputs that carry real information about what the model is getting right.
+                </p>
+            </div>
+
+            <p class="text-gray-700 dark:text-gray-300 mb-4">
+                My first reward function was sequential: it checked format, then composition, then bond lengths, then forces. If any check failed, the function returned 0 immediately. The logic seemed defensible: why reward a crystal that doesn't even have the right composition? But the consequence was that a large fraction of the most valuable training examples were silently discarded.
+            </p>
+            <p class="text-gray-700 dark:text-gray-300 mb-4">
+                Here is a concrete example. Early in training, the model occasionally generated a CIF file with excellent bond geometry and low forces, a structurally coherent proposal, but with a composition that was slightly off (e.g., NaCl₁.₅ instead of NaCl). Under the gated reward, this rollout earned exactly 0. Under a rubric reward, it would have earned partial credit for bond lengths and forces, providing a real gradient signal on two of the four sub-goals.
+            </p>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                <div class="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-700 rounded-lg p-4">
+                    <h4 class="font-bold text-red-800 dark:text-red-200 mb-2">Gated Reward</h4>
+                    <pre class="bg-gray-900 text-gray-100 p-3 rounded text-xs overflow-x-auto"><code>def reward(cif, target):
+    if not parse(cif):
+        return 0.0
+    if not composition_ok(cif, target):
+        return 0.0       # ← silent zero
+    if not bonds_ok(cif):
+        return 0.0
+    if not forces_ok(cif):
+        return 0.0
+    return 1.0</code></pre>
+                    <p class="text-xs text-red-700 dark:text-red-300 mt-2">
+                        A structurally sound crystal with a minor composition error earns 0. Wasted signal on bonds and forces.
+                    </p>
+                </div>
+                <div class="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-700 rounded-lg p-4">
+                    <h4 class="font-bold text-green-800 dark:text-green-200 mb-2">Rubric Reward</h4>
+                    <pre class="bg-gray-900 text-gray-100 p-3 rounded text-xs overflow-x-auto"><code>def reward(cif, target):
+    r = 0.0
+    r += 0.10 * format_score(cif)
+    r += 0.15 * composition_score(cif, target)
+    r += 0.15 * bond_score(cif)
+    r += 0.24 * forces_score(cif)
+    r += 0.60 * energy_score(cif)
+    return r</code></pre>
+                    <p class="text-xs text-green-700 dark:text-green-300 mt-2">
+                        Same crystal earns partial credit for bonds and forces. Gradient flows through all sub-goals simultaneously.
+                    </p>
+                </div>
+            </div>
+
+            <p class="text-gray-700 dark:text-gray-300 mb-4">
+                The deeper problem with gated rewards is that they enforce a strict learning order: the model must master step <em>N</em> before it receives any signal about step <em>N+1</em>. In practice, this means the model can spend many steps stuck on composition while its capacity to learn bond geometry, which it might naturally acquire in parallel, goes entirely unused. Switching to rubric-style scoring accelerated convergence across all sub-goals simultaneously.
+            </p>
+            <p class="text-gray-700 dark:text-gray-300 mb-8">
+                The rubric approach does introduce the multi-term complexity from Lesson 3, but the tradeoff is worth it. Dense gradient coverage is more valuable than the simplicity of a clean sequential gate.
+            </p>
+
+            <!-- ─────────────────────────────────────────── -->
+            <h2 class="text-2xl font-bold mt-10 mb-2">Lesson 2: Avoid Negative Rewards</h2>
+            <div class="bg-red-50 dark:bg-red-900/20 border-l-4 border-red-500 dark:border-red-600 rounded-r-lg p-5 mb-6">
+                <p class="text-red-900 dark:text-red-100 font-medium">
+                    Penalizing a model for an error teaches it to avoid the error, not to fix it. Worse, it can collapse exploration into a local optimum from which the model never escapes.
+                </p>
+            </div>
+
+            <p class="text-gray-700 dark:text-gray-300 mb-4">
+                Early in the project, I ran into a common failure mode: the model was generating text that <em>resembled</em> a CIF file but would fail parsing for superficial reasons: content outside the answer tags, trailing commentary mixed into the structure, or minor syntax errors. My first instinct was to add a negative reward whenever the content inside <code>&lt;|answer_start|&gt;...&lt;|answer_end|&gt;</code> was not parseable by pymatgen's <code>CifParser</code>.
+            </p>
+            <p class="text-gray-700 dark:text-gray-300 mb-4">
+                This was a mistake.
+            </p>
+            <p class="text-gray-700 dark:text-gray-300 mb-4">
+                The reward landscape at that point in training looked roughly like this:
+            </p>
+
+            <!-- Reward structure table -->
+            <div class="overflow-x-auto mb-6">
+                <table class="min-w-full text-sm border rounded-lg overflow-hidden">
+                    <thead class="bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-200 font-semibold">
+                        <tr>
+                            <th class="px-4 py-3 text-left">Model Action</th>
+                            <th class="px-4 py-3 text-center">Probability</th>
+                            <th class="px-4 py-3 text-center">Net Expected Reward</th>
+                        </tr>
+                    </thead>
+                    <tbody class="bg-white dark:bg-gray-900 divide-y divide-gray-200 dark:divide-gray-700 text-gray-700 dark:text-gray-300">
+                        <tr>
+                            <td class="px-4 py-2">Output <em>empty</em> tags (nothing inside)</td>
+                            <td class="px-4 py-2 text-center">trivially easy</td>
+                            <td class="px-4 py-2 text-center font-medium text-green-700 dark:text-green-400">+0.10</td>
+                        </tr>
+                        <tr class="bg-gray-50 dark:bg-gray-800">
+                            <td class="px-4 py-2">Include tags with an <em>invalid</em> CIF</td>
+                            <td class="px-4 py-2 text-center">~moderate</td>
+                            <td class="px-4 py-2 text-center font-medium text-yellow-700 dark:text-yellow-400">+0.10 − 0.05 = +0.05</td>
+                        </tr>
+                        <tr>
+                            <td class="px-4 py-2">Include tags with a <em>valid</em> CIF</td>
+                            <td class="px-4 py-2 text-center">~very low (early training)</td>
+                            <td class="px-4 py-2 text-center font-medium text-green-700 dark:text-green-400">+0.10 or more</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <p class="text-gray-700 dark:text-gray-300 mb-4">
+                The model found the optimal policy immediately: output empty tags and do nothing inside. From its perspective, this was rational. Just using the answer tags earned the format reward (+0.10) regardless of what was inside. Attempting to include a CIF but getting it wrong only netted +0.05, strictly worse than doing nothing. And the probability of generating a valid CIF from scratch was too low early in training to shift the expected value. So the policy quickly converged to: <em>earn the safe 0.10, then stop.</em>
+            </p>
+            <p class="text-gray-700 dark:text-gray-300 mb-4">
+                Entropy collapsed almost immediately. The model had found a local optimum, and the very low probability of any individual rollout producing a valid CIF was never high enough to push it out. This is the classic hill-climbing trap: a small guaranteed reward for the safe action dominates when the risky alternative returns less.
+            </p>
+            <p class="text-gray-700 dark:text-gray-300 mb-6">
+                The fix was straightforward: remove the negative reward entirely. Now, producing empty tags still earns +0.10, but producing an invalid CIF earns 0.0 instead of being penalized. This keeps exploration alive. The model no longer has a reason to prefer empty tags over a genuine attempt. The rare valid CIF, when it appears, reinforces that behavior without the gradient being suppressed by penalties elsewhere.
+            </p>
+
+            <div class="bg-amber-50 dark:bg-amber-900/20 border-l-4 border-amber-500 dark:border-amber-600 rounded-r-lg p-5 mb-8">
+                <h4 class="font-bold text-amber-900 dark:text-amber-100 mb-2">The Curiosity Analogy</h4>
+                <p class="text-amber-800 dark:text-amber-200 text-sm">
+                    Think of it this way: punish a child for taking apart their toys to see how they work, and you may kill their curiosity about how things function. The behavior you prevented was actually the behavior you needed. Language models, at training scale, behave in strikingly similar ways. The more I worked on this project, the more I found myself anthropomorphizing the training dynamics, and the more useful that framing turned out to be.
+                </p>
+            </div>
+
+            <!-- ─────────────────────────────────────────── -->
+            <h2 class="text-2xl font-bold mt-10 mb-2">Lesson 3: The More Terms, the More Unexpected the Outcome</h2>
+            <div class="bg-purple-50 dark:bg-purple-900/20 border-l-4 border-purple-500 dark:border-purple-600 rounded-r-lg p-5 mb-6">
+                <p class="text-purple-900 dark:text-purple-100 font-medium">
+                    Each new reward term doesn't just add one more signal; it multiplies the space of distinct policies that can achieve similar total scores, creating exponentially more surface area for unexpected behavior.
+                </p>
+            </div>
+
+            <p class="text-gray-700 dark:text-gray-300 mb-4">
+                To see why, consider a reward with three independent binary judges (each returning 0 or 1). The set of achievable total rewards is <strong>{0, 1, 2, 3}</strong>. Now suppose one judge is weighted at 0.5× instead of 1.0×. The achievable set expands to <strong>{0, 0.5, 1, 1.5, 2, 2.5}</strong>: only three judges, but 50% more distinct reward levels. Crucially, the mapping from policy behavior to reward is now less unique:
+            </p>
+
+            <div class="overflow-x-auto mb-6">
+                <table class="min-w-full text-sm border rounded-lg overflow-hidden">
+                    <thead class="bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-200 font-semibold">
+                        <tr>
+                            <th class="px-4 py-3 text-left">Policy</th>
+                            <th class="px-4 py-3 text-center">Judge 1 (×0.5)</th>
+                            <th class="px-4 py-3 text-center">Judge 2 (×1.0)</th>
+                            <th class="px-4 py-3 text-center">Judge 3 (×1.0)</th>
+                            <th class="px-4 py-3 text-center">Equal Weights</th>
+                            <th class="px-4 py-3 text-center">Scaled Weights</th>
+                        </tr>
+                    </thead>
+                    <tbody class="bg-white dark:bg-gray-900 divide-y divide-gray-200 dark:divide-gray-700 text-gray-700 dark:text-gray-300">
+                        <tr>
+                            <td class="px-4 py-2 font-medium">Policy A</td>
+                            <td class="px-4 py-2 text-center text-green-600 dark:text-green-400">✅</td>
+                            <td class="px-4 py-2 text-center text-red-600 dark:text-red-400">❌</td>
+                            <td class="px-4 py-2 text-center text-green-600 dark:text-green-400">✅</td>
+                            <td class="px-4 py-2 text-center font-bold">2</td>
+                            <td class="px-4 py-2 text-center">1.5</td>
+                        </tr>
+                        <tr class="bg-gray-50 dark:bg-gray-800">
+                            <td class="px-4 py-2 font-medium">Policy B</td>
+                            <td class="px-4 py-2 text-center text-green-600 dark:text-green-400">✅</td>
+                            <td class="px-4 py-2 text-center text-green-600 dark:text-green-400">✅</td>
+                            <td class="px-4 py-2 text-center text-red-600 dark:text-red-400">❌</td>
+                            <td class="px-4 py-2 text-center font-bold">2</td>
+                            <td class="px-4 py-2 text-center">1.5</td>
+                        </tr>
+                        <tr>
+                            <td class="px-4 py-2 font-medium">Policy C</td>
+                            <td class="px-4 py-2 text-center text-red-600 dark:text-red-400">❌</td>
+                            <td class="px-4 py-2 text-center text-green-600 dark:text-green-400">✅</td>
+                            <td class="px-4 py-2 text-center text-green-600 dark:text-green-400">✅</td>
+                            <td class="px-4 py-2 text-center font-bold">2</td>
+                            <td class="px-4 py-2 text-center font-bold text-indigo-700 dark:text-indigo-300">2.0</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <p class="text-gray-700 dark:text-gray-300 mb-4">
+                With equal weights, Policies A, B, and C are indistinguishable (all score 2). Discount Judge 1 to 0.5× and Policy C jumps to the top (2.0) while Policies A and B both drop to 1.5. Policy C never passes Judge 1 at all, yet it wins because it doesn't need to. This is the core mechanic behind composition hacking in the crystal generation task: the composition rubric is Judge 1.
+            </p>
+
+            <h3 class="text-lg font-bold mt-6 mb-3">The Crystal Generation Case: Composition Hacking</h3>
+            <p class="text-gray-700 dark:text-gray-300 mb-4">
+                In my first multi-term iteration, I used four rubrics: format, composition, bond lengths, and forces. Composition was included intentionally. Free generation without a compositional constraint would inadvertently reward simpler crystals, since binary metals and symmetric oxides are far easier to generate than ternary or quaternary systems.
+            </p>
+            <p class="text-gray-700 dark:text-gray-300 mb-4">
+                Training proceeded well at first. Then, around step 1000, I noticed the aggregate reward kept climbing while the composition sub-score steadily declined. The model had discovered a simple exploit: <strong>ignore the target composition and generate an easier, structurally simpler crystal instead.</strong> A binary metallic oxide, for example, is far more likely to achieve low formation energy and reasonable bond lengths than a ternary chalcogenide. Two rubrics improving more than compensated for one rubric getting worse.
+            </p>
+
+            <div class="bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-5 mb-6">
+                <p class="text-sm text-gray-700 dark:text-gray-300 mb-3 font-medium">Why the math says this will always happen:</p>
+                <p class="text-gray-700 dark:text-gray-300 text-sm mb-2">
+                    Consider the joint distribution of policies that satisfy composition: <strong>P(C = 1)</strong>. Within that subset, the fraction that also achieves good energy and forces, <strong>P(E = 1, F = 1 | C = 1)</strong>, is much smaller than the unconstrained version, <strong>P(E = 1, F = 1)</strong>. The composition constraint shrinks the feasible policy space dramatically.
+                </p>
+                <p class="text-gray-700 dark:text-gray-300 text-sm">
+                    GRPO optimizes for the highest total reward across rollouts. From the perspective of the policy gradient, the expected return is higher in the unconstrained region, regardless of what weight you assign to composition, as long as that weight is small relative to the combined energy and force weight. Composition becomes an obstacle, not a signal.
+                </p>
+            </div>
+
+            <p class="text-gray-700 dark:text-gray-300 mb-4">
+                The fix, for smaller models where this was most acute, was to temporarily increase the composition weight to force the policy back into the compositionally constrained region, then gradually rebalance as the model became capable of satisfying all rubrics simultaneously. At larger scales (30B and 230B parameters), this problem was much less severe: those models had enough capacity to satisfy composition and stability constraints at the same time, so inflated composition weights were not needed.
+            </p>
+
+            <!-- ─────────────────────────────────────────── -->
+            <h2 class="text-2xl font-bold mt-10 mb-2">Lesson 4: Continuous Rewards Outperform Binary Ones</h2>
+            <div class="bg-blue-50 dark:bg-blue-900/20 border-l-4 border-blue-500 dark:border-blue-600 rounded-r-lg p-5 mb-6">
+                <p class="text-blue-900 dark:text-blue-100 font-medium">
+                    When the underlying metric is continuous, preserve that structure in the reward. Binary rewards discard ordinal information that could otherwise guide the policy toward incrementally better outputs.
+                </p>
+            </div>
+
+            <p class="text-gray-700 dark:text-gray-300 mb-4">
+                For the formation energy rubric, the materials science community uses a canonical threshold: structures with E<sub>f</sub> &lt; 0.1 eV/atom are considered thermodynamically stable and likely synthesizable. The natural instinct is to implement this as a step function: above threshold → 0, below threshold → 1.
+            </p>
+            <p class="text-gray-700 dark:text-gray-300 mb-4">
+                The problem is that formation energy is a rich, continuous signal. A structure with E<sub>f</sub> = 0.5 eV/atom is meaningfully better than one with E<sub>f</sub> = 3.2 eV/atom: it is closer to stability, its bond geometry is more coherent, its forces are lower. But under a step reward, they receive identical scores (0). The policy has no reason to prefer one over the other.
+            </p>
+
+            <p class="text-gray-700 dark:text-gray-300 mb-4">
+                Compare the three available reward strategies:
+            </p>
+
+            <div class="space-y-4 mb-6">
+                <div class="bg-white dark:bg-gray-800 border dark:border-gray-700 rounded-lg p-4 shadow-sm">
+                    <h5 class="font-bold text-gray-800 dark:text-gray-200 mb-1">Discrete (Step Function)</h5>
+                    <p class="text-xs text-gray-600 dark:text-gray-400 mb-2">Binary. Provides gradient signal only at the threshold boundary; all off-threshold structures are equivalent.</p>
+                    <pre class="bg-gray-900 text-gray-100 p-3 rounded text-xs overflow-x-auto"><code>def formation_energy_discrete(energy, threshold=0.1):
+    return 1.0 if energy <= threshold else 0.0</code></pre>
+                </div>
+
+                <div class="bg-white dark:bg-gray-800 border dark:border-gray-700 rounded-lg p-4 shadow-sm ring-2 ring-blue-200 dark:ring-blue-800">
+                    <div class="flex items-center justify-between mb-1">
+                        <h5 class="font-bold text-blue-800 dark:text-blue-200">Linear Interpolation</h5>
+                        <span class="bg-blue-100 dark:bg-blue-900/60 text-blue-800 dark:text-blue-200 text-xs px-2 py-1 rounded">Recommended</span>
+                    </div>
+                    <p class="text-xs text-gray-600 dark:text-gray-400 mb-2">Smooth gradient across the sub-threshold region. Every improvement in energy is rewarded proportionally.</p>
+                    <pre class="bg-gray-900 text-gray-100 p-3 rounded text-xs overflow-x-auto"><code>def formation_energy_linear(energy, threshold=0.1, max_penalty=2.0):
+    if energy <= threshold:
+        return 1.0
+    elif energy >= threshold + max_penalty:
+        return 0.0
+    else:
+        return 1.0 - (energy - threshold) / max_penalty</code></pre>
+                </div>
+
+                <div class="bg-white dark:bg-gray-800 border dark:border-gray-700 rounded-lg p-4 shadow-sm">
+                    <h5 class="font-bold text-gray-800 dark:text-gray-200 mb-1">Exponential Decay</h5>
+                    <p class="text-xs text-gray-600 dark:text-gray-400 mb-2">Aggressive penalty for high-energy structures. Front-loads the gradient near the threshold.</p>
+                    <pre class="bg-gray-900 text-gray-100 p-3 rounded text-xs overflow-x-auto"><code>def formation_energy_exponential(energy, threshold=0.1, scale=1.0):
+    if energy <= threshold:
+        return 1.0
+    excess = energy - threshold
+    return np.exp(-excess / scale)</code></pre>
+                </div>
+            </div>
+
+            <p class="text-gray-700 dark:text-gray-300 mb-4">
+                The linear and exponential variants both provide useful gradient signal for structures that are not yet stable, guiding the policy to incrementally reduce formation energy rather than treating all sub-threshold structures as equally worthless. In practice, the linear variant is preferable for early training because the flat gradient near the threshold doesn't create a "cliff" that destabilizes learning once the model is close to passing.
+            </p>
+
+            <p class="text-gray-700 dark:text-gray-300 mb-4">
+                There are cases where binary rewards are appropriate: when the task is genuinely all-or-nothing and there is no meaningful partial credit (a correct classification, a flawless backflip). For crystal generation, this is not the case. The metric is continuous, the DFT oracle is noisy, and dense gradient coverage is more important than strict threshold semantics.
+            </p>
+
+            <!-- ─────────────────────────────────────────── -->
+            <h2 class="text-2xl font-bold mt-10 mb-2">Lesson 5: Always Think About the Path of Least Resistance</h2>
+            <div class="bg-orange-50 dark:bg-orange-900/20 border-l-4 border-orange-500 dark:border-orange-600 rounded-r-lg p-5 mb-6">
+                <p class="text-orange-900 dark:text-orange-100 font-medium">
+                    Before finalizing any reward function, ask: how would a perfectly rational, lazily optimal agent exploit this? The answer will almost always reveal a gap you hadn't considered.
+                </p>
+            </div>
+
+            <p class="text-gray-700 dark:text-gray-300 mb-4">
+                This is less of a standalone lesson and more of a meta-rule that encompasses the others. Every reward hacking failure I encountered was, in retrospect, a failure to predict the path of least resistance in advance.
+            </p>
+            <p class="text-gray-700 dark:text-gray-300 mb-4">
+                The empty-tag exploit (Lesson 2) was the path of least resistance when negative rewards made exploration costly. Composition hacking (Lesson 3) was the path of least resistance when simpler crystals were easier to generate and two other rubrics were sufficient to compensate. The gated reward (Lesson 1) was the path of least resistance for the <em>training loop itself</em>; it was easier to implement but wasteful in practice.
+            </p>
+            <p class="text-gray-700 dark:text-gray-300 mb-6">
+                A useful exercise before training: for each reward term, write down the policy that maximizes that term in isolation while actively failing all others. Then ask: does the total reward still incentivize that degenerate policy? If yes, rebalance. The composition example from Lesson 3 is a perfect illustration: a model that generates whatever crystal it finds easiest, regardless of the target formula, will consistently outscore a model that tries to honor the composition constraint but generates slightly imperfect structures.
+            </p>
+
+            <div class="bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-5 mb-8">
+                <h4 class="font-bold text-gray-800 dark:text-gray-200 mb-3">A Pre-Training Reward Audit Checklist</h4>
+                <ul class="space-y-2 text-sm text-gray-700 dark:text-gray-300">
+                    <li class="flex items-start gap-2"><span class="text-gray-400 mt-0.5">□</span> For each term, what is the trivially optimal policy that maximizes only that term?</li>
+                    <li class="flex items-start gap-2"><span class="text-gray-400 mt-0.5">□</span> Does that degenerate policy still score well under the full reward? If yes, increase the weight of competing terms.</li>
+                    <li class="flex items-start gap-2"><span class="text-gray-400 mt-0.5">□</span> Are any terms negative? If yes, are there safe actions that avoid the penalty entirely? (If so, the model will take them.)</li>
+                    <li class="flex items-start gap-2"><span class="text-gray-400 mt-0.5">□</span> Are any terms gated on others? If a model can score well on three rubrics while a fourth kills all rewards, fix the gating.</li>
+                    <li class="flex items-start gap-2"><span class="text-gray-400 mt-0.5">□</span> Are any continuous metrics being binarized? Consider whether a smooth version would improve gradient coverage.</li>
+                </ul>
+            </div>
+
+            <!-- ─────────────────────────────────────────── -->
+            <h2 class="text-2xl font-bold mt-10 mb-4">How These Lessons Shaped the Final Reward</h2>
+            <p class="text-gray-700 dark:text-gray-300 mb-4">
+                The reward function that trained the full system incorporates all five lessons. No negative rewards. Independent rubric scoring. Continuous rewards for energy and forces where possible. Weights tuned to close off known exploitation paths.
+            </p>
+
+            <div class="overflow-x-auto mb-6">
+                <table class="min-w-full text-sm border rounded-lg overflow-hidden">
+                    <thead class="bg-indigo-50 dark:bg-indigo-900/40 text-gray-700 dark:text-gray-200 font-semibold">
+                        <tr>
+                            <th class="px-4 py-3 text-left">Rubric</th>
+                            <th class="px-4 py-3 text-center">Weight</th>
+                            <th class="px-4 py-3 text-center">Reward Type</th>
+                            <th class="px-4 py-3 text-left">Key Design Choice</th>
+                        </tr>
+                    </thead>
+                    <tbody class="bg-white dark:bg-gray-900 divide-y divide-gray-200 dark:divide-gray-700 text-gray-700 dark:text-gray-300">
+                        <tr>
+                            <td class="px-4 py-2">Format</td>
+                            <td class="px-4 py-2 text-center">0.10</td>
+                            <td class="px-4 py-2 text-center">Binary</td>
+                            <td class="px-4 py-2">No penalty for invalid CIF; only positive reward for a valid one. Avoids empty-tag collapse.</td>
+                        </tr>
+                        <tr class="bg-gray-50 dark:bg-gray-800">
+                            <td class="px-4 py-2">Composition</td>
+                            <td class="px-4 py-2 text-center">0.15</td>
+                            <td class="px-4 py-2 text-center">Binary</td>
+                            <td class="px-4 py-2">Low weight prevents hacking via simpler crystals; non-zero weight provides early gradient signal.</td>
+                        </tr>
+                        <tr>
+                            <td class="px-4 py-2 font-bold">Formation Energy</td>
+                            <td class="px-4 py-2 text-center font-bold">0.60</td>
+                            <td class="px-4 py-2 text-center font-medium text-blue-700 dark:text-blue-300">Continuous (linear)</td>
+                            <td class="px-4 py-2">Primary stability signal. Linear decay rewards incremental improvement below and above threshold.</td>
+                        </tr>
+                        <tr class="bg-gray-50 dark:bg-gray-800">
+                            <td class="px-4 py-2">Forces</td>
+                            <td class="px-4 py-2 text-center">0.24</td>
+                            <td class="px-4 py-2 text-center font-medium text-blue-700 dark:text-blue-300">Continuous (decay)</td>
+                            <td class="px-4 py-2">1/(1 + decay·F_max). Smoothly penalizes residual forces; even imperfect structures get some credit.</td>
+                        </tr>
+                        <tr>
+                            <td class="px-4 py-2">Bond Lengths</td>
+                            <td class="px-4 py-2 text-center">0.15</td>
+                            <td class="px-4 py-2 text-center font-medium text-blue-700 dark:text-blue-300">Continuous (raw score)</td>
+                            <td class="px-4 py-2">Returns the raw 0–1 reasonableness score from pymatgen. Encourages incremental geometric improvement.</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <p class="text-gray-700 dark:text-gray-300 mb-4">
+                None of these weights emerged from a theoretic argument alone. They were each tested against the pre-training audit: which degenerate policies does this weighting allow, and does the full reward still penalize them adequately? The 60% formation energy weight, in particular, is high enough to make purely compositional hacking non-viable; the model needs to hit near-stable energies, not just the right stoichiometry, to score well.
+            </p>
+
+            <!-- Closing -->
+            <div class="bg-indigo-50 dark:bg-indigo-900/20 border-l-4 border-indigo-500 dark:border-indigo-600 rounded-r-lg p-6 mt-10 mb-6">
+                <h4 class="font-bold text-indigo-900 dark:text-indigo-100 mb-2">A Note on Capability</h4>
+                <p class="text-indigo-800 dark:text-indigo-200 text-sm">
+                    All five lessons above exist, fundamentally, because the models I was working with were not capable enough to learn from a simple binary stability reward. This is not a criticism of the models; it is a constraint of the testing regime. The correct remedy, if compute is unconstrained, is almost always: use a more capable model with a simpler reward. Reward engineering is the substitute you reach for when model scale is the binding constraint. With sufficiently large models, the 230B training runs reported in the main post suggest that much of this engineering becomes unnecessary. The model learns to reason its way to stable structures through chain-of-thought alone. The reward, at that scale, can afford to be simple.
+                </p>
+            </div>
+
+        </section>
+
+        <!-- Navigation -->
+        <div class="mt-12 pt-8 border-t border-gray-200 dark:border-gray-700 flex flex-col sm:flex-row justify-between gap-4">
+            <a href="blog_post.html"
+               class="inline-flex items-center gap-2 text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-200 font-medium transition">
+                ← Back to Environment & Training
+            </a>
+            <a href="https://app.primeintellect.ai/dashboard/environments/jmedina9/crystal_relaxation"
+               class="inline-block bg-indigo-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-indigo-700 transition shadow-sm text-center">
+               Train on the Environment →
+            </a>
+        </div>
+
+    </main>
+
+    <script>
+        const toggleSwitch = document.querySelector('#theme-toggle');
+        const currentTheme = localStorage.getItem('theme');
+
+        if (currentTheme) {
+            document.documentElement.classList.add(currentTheme);
+            if (currentTheme === 'dark') {
+                toggleSwitch.checked = true;
+            }
+        }
+
+        function switchTheme(e) {
+            if (e.target.checked) {
+                document.documentElement.classList.add('dark');
+                localStorage.setItem('theme', 'dark');
+            } else {
+                document.documentElement.classList.remove('dark');
+                localStorage.setItem('theme', 'light');
+            }
+        }
+
+        toggleSwitch.addEventListener('change', switchTheme, false);
+    </script>
+</body>
+</html>

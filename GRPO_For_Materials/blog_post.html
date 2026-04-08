@@ -92,31 +92,22 @@
 
         <section class="prose prose-indigo lg:prose-xl dark:prose-invert">
             <p class="text-lg text-gray-700 dark:text-gray-300 mb-6">
-                Finding the stable state of a crystal—a process known as <strong>structural relaxation</strong>—is the bedrock of computational materials science.
-                In density functional theory (DFT), a typical geometry optimization (BFGS or conjugate gradient) requires dozens to hundreds
-                of single-point energy and force evaluations, each solving the Kohn–Sham equations self-consistently at O(N<sup>3</sup>) cost.
-                For high-throughput screening across thousands of candidate structures, this is prohibitive.
-                This project asks: can a language model, trained with reinforcement learning, learn to propose relaxed structures
-                in a <em>single forward pass</em>—replacing the entire iterative SCF loop?
+                This project trains LLMs with reinforcement learning to directly propose relaxed crystal structures in a single forward pass, replacing the iterative self-consistent field loop of density functional theory. Crystal relaxation is a <strong>verifiable task</strong>: generating a stable crystal structure is difficult, but checking one is computationally cheap using a neural network potential. This verification asymmetry makes the problem a natural fit for Group Relative Policy Optimization (GRPO), which requires only a scalar reward from a verifier and no learned value function. A fine-tuned CHGNet model serves as the verifier, and the resulting analysis at two model scales reveals that size determines the qualitative reasoning strategy rather than simply modulating performance magnitude.
             </p>
 
-            <h2 class="text-2xl font-bold mt-10 mb-4">The Challenge: The Energy Landscape</h2>
+            <h2 class="text-2xl font-bold mt-10 mb-4">The Challenge: Stable Structures Occupy a Tiny Corner of Structure Space</h2>
             <p class="mb-6">
-                In a standard DFT relaxation pipeline, a geometry optimizer such as BFGS or conjugate gradient iteratively displaces atoms along the negative force gradient until ‖<strong>F</strong>‖ &lt; ε (typically 0.01–0.05 eV/Å). 
-                While precise, this requires an energy and force evaluation at every step—prohibitively expensive for large-scale screening. 
-                Universal neural network potentials (UNNPs) like CHGNet replace the DFT calculator with a GNN surrogate, but they still rely on the same local gradient-following logic and get trapped in local minima for disordered inputs.
+                Reliable generation of stable crystal structures is a key enabler for closed-loop materials discovery. Physically plausible candidates occupy a small subset of all periodic atomic arrangements, near local minima of the quantum-mechanical energy landscape, while brute-force structure search and first-principles validation are computationally expensive. Generative models aim to learn the distribution of known stable crystals and rapidly propose new candidates that can subsequently be verified and relaxed.
             </p>
             <p class="mb-6">
-                By framing relaxation as a <strong>Markov Decision Process (MDP)</strong> 
-                <em>M = (S, A, T, R, γ)</em>, we can train an LLM policy <em>π<sub>θ</sub>(a | s)</em> 
-                to navigate the PES in a single forward pass rather than through iterative gradient descent:
+                A variety of deep generative approaches have been explored for crystalline materials, including variational autoencoders (VAEs), generative adversarial networks (GANs), and more recent diffusion-based models designed to respect symmetry and periodicity. Ensuring validity and stability remains challenging in part because crystal representations must handle rotational and translational invariance, permutation invariance, and periodic boundary conditions.
             </p>
-            <ul class="list-disc list-inside mb-6 ml-4 text-gray-700 dark:text-gray-300 space-y-1">
-                <li><strong>S</strong>: Crystal structure encoded as a CIF string (lattice parameters <em>a, b, c, α, β, γ</em> + fractional atomic coordinates)</li>
-                <li><strong>A</strong>: A new CIF string output by the LLM (atomic displacements + optional lattice strain)</li>
-                <li><strong>T</strong>: Deterministic—the next state is exactly the CIF the agent outputs, parsed and re-evaluated</li>
-                <li><strong>R</strong>: Weighted rubric score from CHGNet (energy, forces, bond lengths, composition, format)</li>
-            </ul>
+            <p class="mb-6">
+                Among symmetry-aware diffusion approaches, the Crystal Diffusion Variational Autoencoder (CDVAE) [1] formulates crystal generation as a conditional score network that generates 3D atomic structures through a diffusion and denoising process. In practice, samples from CDVAE are produced by annealed Langevin dynamics that iteratively denoise noisy atom coordinates conditioned on a latent code, effectively acting as a learned refinement step that pushes structures toward lower-energy configurations. In downstream workflows, generated structures are typically further relaxed and validated with DFT to assess stability.
+            </p>
+            <p class="mb-6">
+                With the appearance of reasoning language models and the recent push for using transformers in crystal generation, this project asks: can a large language model trained with reinforcement learning learn to propose relaxed crystal structures directly? We reformulate the problem as a <strong>verifiable task</strong>: a setting where generating a correct solution is hard, but checking one is straightforward. Given a proposed CIF string, a neural network potential can evaluate its formation energy and forces, and bond validity can be checked by fast heuristics, providing a deterministic reward signal without any learned critic. This verification asymmetry is the same property that has made RL effective for mathematical reasoning [4] and code generation, where unit tests serve as verifiers. Here, the verifier is a fine-tuned CHGNet model, and the RL algorithm is GRPO, which samples multiple candidate structures, scores each against the verifier, and updates the policy using relative rankings within the group.
+            </p>
 
             <div class="bg-indigo-50 dark:bg-indigo-900/20 border-l-4 border-indigo-500 p-6 my-8 rounded-r-lg">
                 <h3 class="text-indigo-800 dark:text-indigo-200 font-bold mb-2">Environment Highlights:</h3>
@@ -124,7 +115,7 @@
                     <li><strong>State Space:</strong> CIF string encoding lattice vectors (<em>a, b, c, α, β, γ</em>), space group, and fractional Wyckoff coordinates for each atom. Dimensionality scales with system size (typically 3N + 6 degrees of freedom).</li>
                     <li><strong>Action Space:</strong> Discrete token space over CIF text. Effectively encodes continuous atomic displacements (δx, δy, δz per atom) and lattice strain tensors (ε<sub>ij</sub>) through text generation.</li>
                     <li><strong>Reward:</strong> Weighted sum R = 0.10·r<sub>fmt</sub> + 0.15·r<sub>comp</sub> + 0.60·r<sub>E<sub>f</sub></sub> + 0.24·r<sub>F</sub> + 0.15·r<sub>bond</sub>, computed by a CHGNet inference server wrapped in the Prime Intellect <code>verifiers</code> library.</li>
-                    <li><strong>Training algorithm:</strong> GRPO—samples <em>G</em> rollouts per prompt and optimizes the policy relative to the group mean reward, without a learned critic.</li>
+                    <li><strong>Training algorithm:</strong> GRPO samples <em>G</em> rollouts per prompt and optimizes the policy relative to the group mean reward, without a learned critic.</li>
                 </ul>
             </div>
 
@@ -426,7 +417,7 @@ print(f"R² score: {r2:.4f}, MAE: {mae:.4f} eV/atom")</code></pre>
                 </div>
                 
                 <h3 class="text-lg font-bold mt-6 mb-3">Reward Structure</h3>
-                <p class="mb-3">The total reward is a weighted sum of individual rubric scores:</p>
+                <p class="mb-3">The total reward is a weighted sum of individual rubric scores. For a detailed discussion of how these weights were chosen and the pitfalls encountered along the way, see <a href="lessons_about_rewards.html" class="text-blue-600 dark:text-blue-400 underline hover:text-blue-800 dark:hover:text-blue-200">Lessons from Designing Rewards</a>.</p>
                 <div class="bg-gray-50 border border-gray-200 p-4 rounded-lg">
                     <table class="w-full text-sm">
                         <thead>
@@ -764,123 +755,14 @@ else:
                 </p>
             </div>
 
-            <h2 class="text-2xl font-bold mt-10 mb-4">Implementation with Prime Intellect</h2>
-            <p class="mb-4">
-                The environment is designed to be plug-and-play with the Prime Intellect ecosystem. Below is the technical specification 
-                and usage guide for the `crystal-relaxation` environment.
-            </p>
-
-            <div class="bg-blue-50 dark:bg-blue-900/40 border border-blue-200 dark:border-blue-700 rounded-lg p-5 mb-8">
-                <h3 class="text-lg font-bold text-blue-900 dark:text-blue-100 mb-2">Environment Metadata</h3>
-                <ul class="space-y-1 text-sm text-blue-800 dark:text-blue-200">
-                    <li><strong>Environment ID:</strong> <code>crystal-relaxation</code></li>
-                    <li><strong>Description:</strong> Crystal Generation Tasks (Stability, Composition, and validity constraints)</li>
-                    <li><strong>Tags:</strong> <span class="bg-blue-200 dark:bg-blue-800 text-blue-800 dark:text-blue-100 px-2 py-0.5 rounded text-xs">materials</span> <span class="bg-blue-200 dark:bg-blue-800 text-blue-800 dark:text-blue-100 px-2 py-0.5 rounded text-xs">crystals</span> <span class="bg-blue-200 dark:bg-blue-800 text-blue-800 dark:text-blue-100 px-2 py-0.5 rounded text-xs">grpo</span></li>
-                    <li><strong>Primary Dataset:</strong> MP-20 (Materials Project)</li>
-                </ul>
+            <h2 class="text-2xl font-bold mt-10 mb-4">Run It on Prime Intellect</h2>
+            <div class="bg-blue-50 dark:bg-blue-900/40 border border-blue-200 dark:border-blue-700 rounded-lg p-6 mb-8">
+                <p class="text-blue-800 dark:text-blue-200 mb-4">The environment is hosted on Prime Intellect and updated continuously. For the latest setup instructions, quickstart commands, and environment arguments, click the button at the top of this page.</p>
+                <a href="https://app.primeintellect.ai/dashboard/environments/jmedina9/crystal_relaxation"
+                   target="_blank" rel="noopener noreferrer"
+                   class="inline-block bg-blue-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-blue-700 transition shadow-lg">View on Prime Intellect &rarr;</a>
             </div>
 
-            <h3 class="text-xl font-bold mt-6 mb-3">Task Architecture</h3>
-            <p class="mb-4">
-                The environment supports multi-turn refinements using a custom parser. The rubric system is hierarchical:
-            </p>
-            <ul class="list-disc list-inside mb-6 ml-4 text-gray-700 dark:text-gray-300">
-                <li><strong>Level 1:</strong> Valid Answer (Parsable format, correct schema)</li>
-                <li><strong>Level 2:</strong> Constraints (Target composition match, Space Group match)</li>
-                <li><strong>Level 3:</strong> Validity (Forces &lt; 0.1 eV/Å, Bond lengths ±32%)</li>
-            </ul>
-
-            <h3 class="text-xl font-bold mt-8 mb-4">Quickstart</h3>
-            <p class="mb-3">1. The CHGNet inference server is <strong>initialized automatically</strong> when the environment starts. If <code>tmux</code> is available, it launches in a background pane on port 1111 using FastAPI (<code>uvicorn</code>). If tmux is unavailable, it falls back to an in-process CPU call. To start manually:</p>
-            <pre class="bg-gray-900 text-gray-100 p-4 rounded-lg overflow-x-auto text-sm mb-4"><code>export CHGNET_PATH="./crystal_relaxation/finetuned_chgnet_model.pth"
-# Auto-launched via tmux (if available) on port 1111, or in-process CPU fallback
-# To start manually:
-uvicorn crystal_relaxation.server:app --host 0.0.0.0 --port 1111</code></pre>
-            
-            <p class="mb-3">2. Run an evaluation using <code>vf-eval</code>:</p>
-            
-            <p class="text-sm font-bold text-gray-600 dark:text-gray-400 mb-1">Option A: Crystal Generation Task</p>
-            <pre class="bg-gray-900 text-gray-100 p-4 rounded-lg overflow-x-auto text-sm mb-4"><code>uv run vf-eval crystal_relaxation \
---num-examples 5 \
---rollouts-per-example 3 \
--m gpt-5 \
---env-args='{"dataset_path":"./data/mp_20/mp_20_group_classification_dataset.json","max_turns":1,"enabled_rubrics":["spacegroup_classification"], "to_generate_cif": false}'</code></pre>
-
-            <p class="text-sm font-bold text-gray-600 dark:text-gray-400 mb-1">Option B: Classification Task</p>
-            <pre class="bg-gray-900 text-gray-100 p-4 rounded-lg overflow-x-auto text-sm mb-8"><code>uv run vf-eval crystal_relaxation \
---num-examples 5 \
---rollouts-per-example 3 \
--m gpt-5 \
---env-args='{"dataset_path":"./data/mp_20/mp_20_relaxation_generation_dataset.json","max_turns":2,"enabled_rubrics":["format","composition","formation_energy","bond_lengths"],"port":1111}'</code></pre>
-
-            <h3 class="text-xl font-bold mt-8 mb-4">Environment Arguments</h3>
-            <div class="overflow-x-auto mb-8">
-                <table class="min-w-full text-sm text-left border rounded-lg overflow-hidden">
-                    <thead class="bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-200 font-bold uppercase">
-                        <tr>
-                            <th class="px-4 py-3 border-b border-gray-200 dark:border-gray-700">Arg</th>
-                            <th class="px-4 py-3 border-b border-gray-200 dark:border-gray-700">Type</th>
-                            <th class="px-4 py-3 border-b border-gray-200 dark:border-gray-700">Default</th>
-                            <th class="px-4 py-3 border-b border-gray-200 dark:border-gray-700">Description</th>
-                        </tr>
-                    </thead>
-                    <tbody class="bg-white dark:bg-gray-900 divide-y divide-gray-200 dark:divide-gray-700">
-                        <tr>
-                            <td class="px-4 py-2 font-mono text-indigo-600 dark:text-indigo-400">max_turns</td>
-                            <td class="px-4 py-2">int</td>
-                            <td class="px-4 py-2">1</td>
-                            <td class="px-4 py-2">Maximum number of refinement turns</td>
-                        </tr>
-                        <tr>
-                            <td class="px-4 py-2 font-mono text-indigo-600 dark:text-indigo-400">target_composition</td>
-                            <td class="px-4 py-2">str</td>
-                            <td class="px-4 py-2">None</td>
-                            <td class="px-4 py-2">Optional target chemical composition</td>
-                        </tr>
-                        <tr>
-                            <td class="px-4 py-2 font-mono text-indigo-600 dark:text-indigo-400">formation_energy_threshold</td>
-                            <td class="px-4 py-2">float</td>
-                            <td class="px-4 py-2">0.1</td>
-                            <td class="px-4 py-2">Max acceptable energy (eV/atom)</td>
-                        </tr>
-                        <tr>
-                            <td class="px-4 py-2 font-mono text-indigo-600 dark:text-indigo-400">to_generate_cif</td>
-                            <td class="px-4 py-2">bool</td>
-                            <td class="px-4 py-2">True</td>
-                            <td class="px-4 py-2">True for generation, False for classification</td>
-                        </tr>
-                        <tr>
-                            <td class="px-4 py-2 font-mono text-indigo-600">port</td>
-                            <td class="px-4 py-2">int</td>
-                            <td class="px-4 py-2">1111</td>
-                            <td class="px-4 py-2">Port for CHGNet server</td>
-                        </tr>
-                    </tbody>
-                </table>
-            </div>
-
-            <h3 class="text-xl font-bold mt-8 mb-4">Metrics</h3>
-            <div class="bg-white border text-sm rounded-lg overflow-hidden mb-8">
-                <table class="min-w-full text-left">
-                    <thead class="bg-gray-50 border-b">
-                        <tr>
-                            <th class="px-4 py-2 font-bold text-gray-700">Metric</th>
-                            <th class="px-4 py-2 font-bold text-gray-700">Meaning</th>
-                        </tr>
-                    </thead>
-                    <tbody class="divide-y">
-                        <tr>
-                            <td class="px-4 py-2 font-mono text-indigo-600">reward</td>
-                            <td class="px-4 py-2">Main scalar reward (weighted sum of criteria)</td>
-                        </tr>
-                        <tr>
-                            <td class="px-4 py-2 font-mono text-indigo-600">accuracy</td>
-                            <td class="px-4 py-2">Exact match on target answer</td>
-                        </tr>
-                    </tbody>
-                </table>
-            </div>
-            
             <h2 class="text-2xl font-bold mt-10 mb-4">What's Next?</h2>
             <p class="mb-4">
                 Several open problems are worth pursuing from here:
