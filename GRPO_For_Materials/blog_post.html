@@ -415,7 +415,162 @@ print(f"R² score: {r2:.4f}, MAE: {mae:.4f} eV/atom")</code></pre>
                         </div>
                     </div>
                 </div>
-                
+
+                <!-- Interactive Crystal Relaxation Visualization -->
+                <div class="my-8 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-6 shadow-sm">
+                    <h3 class="text-lg font-bold mb-2 text-center">Crystal Relaxation Across Turns</h3>
+                    <p class="text-sm text-gray-500 dark:text-gray-400 text-center mb-4">The LLM iteratively refines atom positions and lattice parameters, lowering formation energy each turn.</p>
+
+                    <!-- Step indicators -->
+                    <div class="flex justify-center gap-2 mb-5">
+                        <button onclick="setCrystalStep(0)" id="crys-btn-0" class="crys-step-btn px-3 py-1.5 rounded-lg text-xs font-semibold border-2 transition-all duration-300 bg-red-50 border-red-400 text-red-700 dark:bg-red-900/30 dark:border-red-600 dark:text-red-300 ring-2 ring-red-300">Unrelaxed</button>
+                        <span class="self-center text-gray-400">→</span>
+                        <button onclick="setCrystalStep(1)" id="crys-btn-1" class="crys-step-btn px-3 py-1.5 rounded-lg text-xs font-semibold border-2 transition-all duration-300 bg-gray-50 border-gray-300 text-gray-500 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-400">Turn 1</button>
+                        <span class="self-center text-gray-400">→</span>
+                        <button onclick="setCrystalStep(2)" id="crys-btn-2" class="crys-step-btn px-3 py-1.5 rounded-lg text-xs font-semibold border-2 transition-all duration-300 bg-gray-50 border-gray-300 text-gray-500 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-400">Turn 2</button>
+                    </div>
+
+                    <!-- Crystal SVG container -->
+                    <div class="flex justify-center">
+                        <div style="position:relative; width:320px; height:360px;">
+                            <!-- State 0: Unrelaxed -->
+                            <div id="crys-state-0" class="crys-state" style="position:absolute;inset:0;text-align:center;transition:opacity 0.5s;">
+                                <div style="font-weight:700; color:#ef4444; font-size:0.8em; margin-bottom:0.4em;">⚠ Unrelaxed Structure</div>
+                                <svg viewBox="0 0 260 280" width="320" height="340" style="filter:drop-shadow(0 2px 8px rgba(0,0,0,0.15));">
+                                    <rect x="30" y="30" width="200" height="200" fill="none" stroke="#94a3b8" stroke-width="1.5" stroke-dasharray="6,3" rx="3"/>
+                                    <line x1="60" y1="15" x2="230" y2="15" stroke="#cbd5e1" stroke-width="1" stroke-dasharray="4,4" opacity="0.4"/>
+                                    <line x1="230" y1="15" x2="230" y2="215" stroke="#cbd5e1" stroke-width="1" stroke-dasharray="4,4" opacity="0.4"/>
+                                    <line x1="30" y1="30" x2="60" y2="15" stroke="#cbd5e1" stroke-width="1" stroke-dasharray="4,4" opacity="0.4"/>
+                                    <line x1="230" y1="30" x2="230" y2="15" stroke="#cbd5e1" stroke-width="1" stroke-dasharray="4,4" opacity="0.4"/>
+                                    <line x1="55" y1="55" x2="138" y2="230" stroke="#64748b" stroke-width="1.5" opacity="0.5"/>
+                                    <line x1="210" y1="48" x2="138" y2="230" stroke="#64748b" stroke-width="1.5" opacity="0.5"/>
+                                    <line x1="55" y1="55" x2="210" y2="48" stroke="#64748b" stroke-width="1.5" opacity="0.5"/>
+                                    <line x1="55" y1="55" x2="30" y2="172" stroke="#64748b" stroke-width="1.5" opacity="0.5"/>
+                                    <line x1="210" y1="48" x2="220" y2="165" stroke="#64748b" stroke-width="1.5" opacity="0.5"/>
+                                    <circle cx="55" cy="55" r="18" fill="#3b82f6" stroke="#1d4ed8" stroke-width="2"/>
+                                    <text x="55" y="60" text-anchor="middle" fill="white" font-size="13" font-weight="700">Ti</text>
+                                    <circle cx="210" cy="48" r="18" fill="#3b82f6" stroke="#1d4ed8" stroke-width="2"/>
+                                    <text x="210" y="53" text-anchor="middle" fill="white" font-size="13" font-weight="700">Ti</text>
+                                    <circle cx="138" cy="230" r="12" fill="#22c55e" stroke="#15803d" stroke-width="2"/>
+                                    <text x="138" y="235" text-anchor="middle" fill="white" font-size="11" font-weight="700">H</text>
+                                    <circle cx="30" cy="172" r="12" fill="#22c55e" stroke="#15803d" stroke-width="2"/>
+                                    <text x="30" y="177" text-anchor="middle" fill="white" font-size="11" font-weight="700">H</text>
+                                    <circle cx="220" cy="165" r="12" fill="#22c55e" stroke="#15803d" stroke-width="2"/>
+                                    <text x="220" y="170" text-anchor="middle" fill="white" font-size="11" font-weight="700">H</text>
+                                    <rect x="60" y="248" width="140" height="26" rx="4" fill="#fef2f2" stroke="#fca5a5" stroke-width="1"/>
+                                    <text x="130" y="265" text-anchor="middle" fill="#dc2626" font-size="12" font-weight="600">E&#8343; = 0.34 eV/atom</text>
+                                </svg>
+                            </div>
+
+                            <!-- State 1: Turn 1 - Partially Relaxed -->
+                            <div id="crys-state-1" class="crys-state" style="position:absolute;inset:0;text-align:center;opacity:0;transition:opacity 0.5s;">
+                                <div style="font-weight:700; color:#f97316; font-size:0.8em; margin-bottom:0.4em;">Turn 1 — Partially Relaxed</div>
+                                <svg viewBox="0 0 260 280" width="320" height="340" style="filter:drop-shadow(0 2px 8px rgba(0,0,0,0.15));">
+                                    <rect x="30" y="30" width="200" height="200" fill="none" stroke="#94a3b8" stroke-width="1.5" stroke-dasharray="6,3" rx="3"/>
+                                    <line x1="55" y1="18" x2="230" y2="18" stroke="#cbd5e1" stroke-width="1" stroke-dasharray="4,4" opacity="0.4"/>
+                                    <line x1="230" y1="18" x2="230" y2="218" stroke="#cbd5e1" stroke-width="1" stroke-dasharray="4,4" opacity="0.4"/>
+                                    <line x1="30" y1="30" x2="55" y2="18" stroke="#cbd5e1" stroke-width="1" stroke-dasharray="4,4" opacity="0.4"/>
+                                    <line x1="230" y1="30" x2="230" y2="18" stroke="#cbd5e1" stroke-width="1" stroke-dasharray="4,4" opacity="0.4"/>
+                                    <line x1="50" y1="50" x2="130" y2="210" stroke="#64748b" stroke-width="1.5" opacity="0.5"/>
+                                    <line x1="200" y1="50" x2="130" y2="210" stroke="#64748b" stroke-width="1.5" opacity="0.5"/>
+                                    <line x1="50" y1="50" x2="200" y2="50" stroke="#64748b" stroke-width="1.5" opacity="0.5"/>
+                                    <line x1="50" y1="50" x2="50" y2="170" stroke="#64748b" stroke-width="1.5" opacity="0.5"/>
+                                    <line x1="200" y1="50" x2="200" y2="170" stroke="#64748b" stroke-width="1.5" opacity="0.5"/>
+                                    <circle cx="50" cy="50" r="18" fill="#3b82f6" stroke="#1d4ed8" stroke-width="2"/>
+                                    <text x="50" y="55" text-anchor="middle" fill="white" font-size="13" font-weight="700">Ti</text>
+                                    <circle cx="200" cy="50" r="18" fill="#3b82f6" stroke="#1d4ed8" stroke-width="2"/>
+                                    <text x="200" y="55" text-anchor="middle" fill="white" font-size="13" font-weight="700">Ti</text>
+                                    <circle cx="130" cy="210" r="12" fill="#22c55e" stroke="#15803d" stroke-width="2"/>
+                                    <text x="130" y="215" text-anchor="middle" fill="white" font-size="11" font-weight="700">H</text>
+                                    <circle cx="50" cy="170" r="12" fill="#22c55e" stroke="#15803d" stroke-width="2"/>
+                                    <text x="50" y="175" text-anchor="middle" fill="white" font-size="11" font-weight="700">H</text>
+                                    <circle cx="200" cy="170" r="12" fill="#22c55e" stroke="#15803d" stroke-width="2"/>
+                                    <text x="200" y="175" text-anchor="middle" fill="white" font-size="11" font-weight="700">H</text>
+                                    <rect x="60" y="248" width="140" height="26" rx="4" fill="#fffbeb" stroke="#fcd34d" stroke-width="1"/>
+                                    <text x="130" y="265" text-anchor="middle" fill="#d97706" font-size="12" font-weight="600">E&#8343; = 0.12 eV/atom</text>
+                                </svg>
+                            </div>
+
+                            <!-- State 2: Turn 2 - Relaxed -->
+                            <div id="crys-state-2" class="crys-state" style="position:absolute;inset:0;text-align:center;opacity:0;transition:opacity 0.5s;">
+                                <div style="font-weight:700; color:#22c55e; font-size:0.8em; margin-bottom:0.4em;">Turn 2 — Relaxed &#10003;</div>
+                                <svg viewBox="0 0 260 280" width="320" height="340" style="filter:drop-shadow(0 2px 8px rgba(0,0,0,0.15));">
+                                    <rect x="30" y="30" width="200" height="200" fill="none" stroke="#94a3b8" stroke-width="1.5" stroke-dasharray="6,3" rx="3"/>
+                                    <line x1="55" y1="18" x2="230" y2="18" stroke="#cbd5e1" stroke-width="1" stroke-dasharray="4,4" opacity="0.4"/>
+                                    <line x1="230" y1="18" x2="230" y2="218" stroke="#cbd5e1" stroke-width="1" stroke-dasharray="4,4" opacity="0.4"/>
+                                    <line x1="30" y1="30" x2="55" y2="18" stroke="#cbd5e1" stroke-width="1" stroke-dasharray="4,4" opacity="0.4"/>
+                                    <line x1="230" y1="30" x2="230" y2="18" stroke="#cbd5e1" stroke-width="1" stroke-dasharray="4,4" opacity="0.4"/>
+                                    <line x1="45" y1="45" x2="130" y2="200" stroke="#64748b" stroke-width="1.5" opacity="0.5"/>
+                                    <line x1="205" y1="45" x2="130" y2="200" stroke="#64748b" stroke-width="1.5" opacity="0.5"/>
+                                    <line x1="45" y1="45" x2="205" y2="45" stroke="#64748b" stroke-width="1.5" opacity="0.5"/>
+                                    <line x1="45" y1="45" x2="45" y2="165" stroke="#64748b" stroke-width="1.5" opacity="0.5"/>
+                                    <line x1="205" y1="45" x2="205" y2="165" stroke="#64748b" stroke-width="1.5" opacity="0.5"/>
+                                    <line x1="45" y1="165" x2="205" y2="165" stroke="#64748b" stroke-width="1.5" opacity="0.5"/>
+                                    <circle cx="45" cy="45" r="18" fill="#3b82f6" stroke="#1d4ed8" stroke-width="2"/>
+                                    <text x="45" y="50" text-anchor="middle" fill="white" font-size="13" font-weight="700">Ti</text>
+                                    <circle cx="205" cy="45" r="18" fill="#3b82f6" stroke="#1d4ed8" stroke-width="2"/>
+                                    <text x="205" y="50" text-anchor="middle" fill="white" font-size="13" font-weight="700">Ti</text>
+                                    <circle cx="130" cy="200" r="12" fill="#22c55e" stroke="#15803d" stroke-width="2"/>
+                                    <text x="130" y="205" text-anchor="middle" fill="white" font-size="11" font-weight="700">H</text>
+                                    <circle cx="45" cy="165" r="12" fill="#22c55e" stroke="#15803d" stroke-width="2"/>
+                                    <text x="45" y="170" text-anchor="middle" fill="white" font-size="11" font-weight="700">H</text>
+                                    <circle cx="205" cy="165" r="12" fill="#22c55e" stroke="#15803d" stroke-width="2"/>
+                                    <text x="205" y="170" text-anchor="middle" fill="white" font-size="11" font-weight="700">H</text>
+                                    <rect x="55" y="248" width="150" height="26" rx="4" fill="#f0fdf4" stroke="#86efac" stroke-width="1"/>
+                                    <text x="130" y="265" text-anchor="middle" fill="#16a34a" font-size="12" font-weight="600">E&#8343; = 0.025 eV/atom &#10003;</text>
+                                </svg>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Auto-play / controls -->
+                    <div class="flex justify-center mt-2 gap-3">
+                        <button onclick="toggleCrystalAutoplay()" id="crys-play-btn" class="text-xs px-3 py-1 rounded border border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition">⏸ Pause</button>
+                    </div>
+                </div>
+
+                <script>
+                (function() {
+                    let currentStep = 0;
+                    let autoplayInterval = null;
+                    const btnStyles = [
+                        ['bg-red-50','border-red-400','text-red-700','ring-2','ring-red-300','dark:bg-red-900/30','dark:border-red-600','dark:text-red-300'],
+                        ['bg-orange-50','border-orange-400','text-orange-700','ring-2','ring-orange-300','dark:bg-orange-900/30','dark:border-orange-600','dark:text-orange-300'],
+                        ['bg-green-50','border-green-400','text-green-700','ring-2','ring-green-300','dark:bg-green-900/30','dark:border-green-600','dark:text-green-300']
+                    ];
+                    const inactiveStyle = ['bg-gray-50','border-gray-300','text-gray-500','dark:bg-gray-700','dark:border-gray-600','dark:text-gray-400'];
+
+                    window.setCrystalStep = function(step) {
+                        currentStep = step;
+                        for (let i = 0; i < 3; i++) {
+                            document.getElementById('crys-state-' + i).style.opacity = i === step ? '1' : '0';
+                            const btn = document.getElementById('crys-btn-' + i);
+                            btn.className = 'crys-step-btn px-3 py-1.5 rounded-lg text-xs font-semibold border-2 transition-all duration-300 ' +
+                                (i === step ? btnStyles[i].join(' ') : inactiveStyle.join(' '));
+                        }
+                    };
+
+                    function advance() {
+                        setCrystalStep((currentStep + 1) % 3);
+                    }
+
+                    window.toggleCrystalAutoplay = function() {
+                        const btn = document.getElementById('crys-play-btn');
+                        if (autoplayInterval) {
+                            clearInterval(autoplayInterval);
+                            autoplayInterval = null;
+                            btn.textContent = '▶ Play';
+                        } else {
+                            autoplayInterval = setInterval(advance, 2000);
+                            btn.textContent = '⏸ Pause';
+                        }
+                    };
+
+                    // Start autoplay
+                    autoplayInterval = setInterval(advance, 2000);
+                })();
+                </script>
+
                 <h3 class="text-lg font-bold mt-6 mb-3">Reward Structure</h3>
                 <p class="mb-3">The total reward is a weighted sum of individual rubric scores. For a detailed discussion of how these weights were chosen and the pitfalls encountered along the way, see <a href="lessons_about_rewards.html" class="text-blue-600 dark:text-blue-400 underline hover:text-blue-800 dark:hover:text-blue-200">Lessons from Designing Rewards</a>.</p>
                 <div class="bg-gray-50 border border-gray-200 p-4 rounded-lg">

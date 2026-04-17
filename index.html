@@ -52,7 +52,25 @@
 					<div class="row aln-center">
 						<div class="col-4 col-6-medium col-12-small">
 							<article class="box style2">
-								<a href="GRPO_For_Materials/blog_post.html" class="image featured"><img src="GRPO_For_Materials/chgnet_finetuning_performance.png" alt="CHGNet fine-tuning performance" /></a>
+								<a href="GRPO_For_Materials/blog_post.html" class="image featured" style="position:relative; display:block; overflow:hidden; background:#f8fafc;">
+									<div id="rl-crystal-vis" style="width:100%; height:220px; display:flex; align-items:center; justify-content:center;">
+										<!-- State 0 -->
+										<div class="rl-crys-state" style="position:absolute; text-align:center; transition:opacity 0.6s;">
+											<div style="font-weight:700; color:#ef4444; font-size:0.65em; margin-bottom:2px;">⚠ Unrelaxed</div>
+											<svg viewBox="0 0 260 280" width="180" height="190"><rect x="30" y="30" width="200" height="200" fill="none" stroke="#94a3b8" stroke-width="1.5" stroke-dasharray="6,3" rx="3"/><line x1="55" y1="55" x2="138" y2="230" stroke="#64748b" stroke-width="1.5" opacity=".5"/><line x1="210" y1="48" x2="138" y2="230" stroke="#64748b" stroke-width="1.5" opacity=".5"/><line x1="55" y1="55" x2="210" y2="48" stroke="#64748b" stroke-width="1.5" opacity=".5"/><line x1="55" y1="55" x2="30" y2="172" stroke="#64748b" stroke-width="1.5" opacity=".5"/><line x1="210" y1="48" x2="220" y2="165" stroke="#64748b" stroke-width="1.5" opacity=".5"/><circle cx="55" cy="55" r="18" fill="#3b82f6" stroke="#1d4ed8" stroke-width="2"/><text x="55" y="60" text-anchor="middle" fill="#fff" font-size="13" font-weight="700">Ti</text><circle cx="210" cy="48" r="18" fill="#3b82f6" stroke="#1d4ed8" stroke-width="2"/><text x="210" y="53" text-anchor="middle" fill="#fff" font-size="13" font-weight="700">Ti</text><circle cx="138" cy="230" r="12" fill="#22c55e" stroke="#15803d" stroke-width="2"/><text x="138" y="235" text-anchor="middle" fill="#fff" font-size="11" font-weight="700">H</text><circle cx="30" cy="172" r="12" fill="#22c55e" stroke="#15803d" stroke-width="2"/><text x="30" y="177" text-anchor="middle" fill="#fff" font-size="11" font-weight="700">H</text><circle cx="220" cy="165" r="12" fill="#22c55e" stroke="#15803d" stroke-width="2"/><text x="220" y="170" text-anchor="middle" fill="#fff" font-size="11" font-weight="700">H</text><rect x="60" y="248" width="140" height="26" rx="4" fill="#fef2f2" stroke="#fca5a5" stroke-width="1"/><text x="130" y="265" text-anchor="middle" fill="#dc2626" font-size="12" font-weight="600">Ef = 0.34 eV/atom</text></svg>
+										</div>
+										<!-- State 1 -->
+										<div class="rl-crys-state" style="position:absolute; text-align:center; opacity:0; transition:opacity 0.6s;">
+											<div style="font-weight:700; color:#f97316; font-size:0.65em; margin-bottom:2px;">Turn 1 — Partially Relaxed</div>
+											<svg viewBox="0 0 260 280" width="180" height="190"><rect x="30" y="30" width="200" height="200" fill="none" stroke="#94a3b8" stroke-width="1.5" stroke-dasharray="6,3" rx="3"/><line x1="50" y1="50" x2="130" y2="210" stroke="#64748b" stroke-width="1.5" opacity=".5"/><line x1="200" y1="50" x2="130" y2="210" stroke="#64748b" stroke-width="1.5" opacity=".5"/><line x1="50" y1="50" x2="200" y2="50" stroke="#64748b" stroke-width="1.5" opacity=".5"/><line x1="50" y1="50" x2="50" y2="170" stroke="#64748b" stroke-width="1.5" opacity=".5"/><line x1="200" y1="50" x2="200" y2="170" stroke="#64748b" stroke-width="1.5" opacity=".5"/><circle cx="50" cy="50" r="18" fill="#3b82f6" stroke="#1d4ed8" stroke-width="2"/><text x="50" y="55" text-anchor="middle" fill="#fff" font-size="13" font-weight="700">Ti</text><circle cx="200" cy="50" r="18" fill="#3b82f6" stroke="#1d4ed8" stroke-width="2"/><text x="200" y="55" text-anchor="middle" fill="#fff" font-size="13" font-weight="700">Ti</text><circle cx="130" cy="210" r="12" fill="#22c55e" stroke="#15803d" stroke-width="2"/><text x="130" y="215" text-anchor="middle" fill="#fff" font-size="11" font-weight="700">H</text><circle cx="50" cy="170" r="12" fill="#22c55e" stroke="#15803d" stroke-width="2"/><text x="50" y="175" text-anchor="middle" fill="#fff" font-size="11" font-weight="700">H</text><circle cx="200" cy="170" r="12" fill="#22c55e" stroke="#15803d" stroke-width="2"/><text x="200" y="175" text-anchor="middle" fill="#fff" font-size="11" font-weight="700">H</text><rect x="60" y="248" width="140" height="26" rx="4" fill="#fffbeb" stroke="#fcd34d" stroke-width="1"/><text x="130" y="265" text-anchor="middle" fill="#d97706" font-size="12" font-weight="600">Ef = 0.12 eV/atom</text></svg>
+										</div>
+										<!-- State 2 -->
+										<div class="rl-crys-state" style="position:absolute; text-align:center; opacity:0; transition:opacity 0.6s;">
+											<div style="font-weight:700; color:#22c55e; font-size:0.65em; margin-bottom:2px;">Turn 2 — Relaxed ✓</div>
+											<svg viewBox="0 0 260 280" width="180" height="190"><rect x="30" y="30" width="200" height="200" fill="none" stroke="#94a3b8" stroke-width="1.5" stroke-dasharray="6,3" rx="3"/><line x1="45" y1="45" x2="130" y2="200" stroke="#64748b" stroke-width="1.5" opacity=".5"/><line x1="205" y1="45" x2="130" y2="200" stroke="#64748b" stroke-width="1.5" opacity=".5"/><line x1="45" y1="45" x2="205" y2="45" stroke="#64748b" stroke-width="1.5" opacity=".5"/><line x1="45" y1="45" x2="45" y2="165" stroke="#64748b" stroke-width="1.5" opacity=".5"/><line x1="205" y1="45" x2="205" y2="165" stroke="#64748b" stroke-width="1.5" opacity=".5"/><line x1="45" y1="165" x2="205" y2="165" stroke="#64748b" stroke-width="1.5" opacity=".5"/><circle cx="45" cy="45" r="18" fill="#3b82f6" stroke="#1d4ed8" stroke-width="2"/><text x="45" y="50" text-anchor="middle" fill="#fff" font-size="13" font-weight="700">Ti</text><circle cx="205" cy="45" r="18" fill="#3b82f6" stroke="#1d4ed8" stroke-width="2"/><text x="205" y="50" text-anchor="middle" fill="#fff" font-size="13" font-weight="700">Ti</text><circle cx="130" cy="200" r="12" fill="#22c55e" stroke="#15803d" stroke-width="2"/><text x="130" y="205" text-anchor="middle" fill="#fff" font-size="11" font-weight="700">H</text><circle cx="45" cy="165" r="12" fill="#22c55e" stroke="#15803d" stroke-width="2"/><text x="45" y="170" text-anchor="middle" fill="#fff" font-size="11" font-weight="700">H</text><circle cx="205" cy="165" r="12" fill="#22c55e" stroke="#15803d" stroke-width="2"/><text x="205" y="170" text-anchor="middle" fill="#fff" font-size="11" font-weight="700">H</text><rect x="55" y="248" width="150" height="26" rx="4" fill="#f0fdf4" stroke="#86efac" stroke-width="1"/><text x="130" y="265" text-anchor="middle" fill="#16a34a" font-size="12" font-weight="600">Ef = 0.025 eV/atom ✓</text></svg>
+										</div>
+									</div>
+								</a>
 								<h3><a href="GRPO_For_Materials/blog_post.html">RL Crystal Relaxation</a></h3>
 								<p>Blog post on the GRPO environment for crystal relaxation with CHGNet.</p>
 								<ul class="actions">
@@ -62,7 +80,9 @@
 						</div>
 						<div class="col-4 col-6-medium col-12-small">
 							<article class="box style2">
-								<a href="https://link.springer.com/article/10.1186/s13321-023-00765-1" class="image featured" target="_blank" rel="noopener noreferrer"><img src="GRPO_For_Materials/chgnet_finetuning_performance.png" alt="Bloom filters for molecules preview" /></a>
+								<a href="https://link.springer.com/article/10.1186/s13321-023-00765-1" class="image featured" target="_blank" rel="noopener noreferrer" style="position:relative; display:block; overflow:hidden; height:220px; background:#f8fafc;">
+									<iframe src="bloom_filter_animation.html" style="position:absolute; top:0; left:0; width:200%; height:200%; border:none; pointer-events:none; transform:scale(0.5); transform-origin:top left;" title="Bloom Filter Animation" loading="lazy"></iframe>
+								</a>
 								<h3><a href="https://link.springer.com/article/10.1186/s13321-023-00765-1" target="_blank" rel="noopener noreferrer">Bloom Filters for Molecules</a></h3>
 								<p>Compact molecular representations for fast screening.</p>
 								<ul class="actions">
@@ -141,6 +161,19 @@
 							toggle.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
 						});
 					});
+				})();
+			</script>
+			<script>
+				(function () {
+					var states = document.querySelectorAll('.rl-crys-state');
+					if (!states.length) return;
+					var step = 0;
+					setInterval(function () {
+						step = (step + 1) % states.length;
+						states.forEach(function (el, i) {
+							el.style.opacity = i === step ? '1' : '0';
+						});
+					}, 2000);
 				})();
 			</script>
 
