@@ -10,6 +10,61 @@
 		<meta charset="utf-8" />
 		<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no" />
 		<link rel="stylesheet" href="assets/css/main.css" />
+		<style>
+			/* Smaller, aligned card buttons */
+			.box.style2 .button.small {
+				padding: 0.45em 1.1em;
+				font-size: 0.72em;
+				letter-spacing: 0.01em;
+			}
+			.box.style2 ul.actions {
+				display: flex;
+				flex-wrap: wrap;
+				align-items: center;
+				justify-content: center;
+				gap: 0.4em;
+				padding-left: 0;
+				list-style: none;
+				margin-top: 0.6em;
+			}
+			.box.style2 ul.actions li {
+				padding-left: 0;
+			}
+			/* Slightly smaller boxes and text */
+			.box.style2 {
+				padding: 1.4em;
+				font-size: 0.9em;
+			}
+			/* Fix image bleed offsets to match new padding (was 2em, now 1.4em) */
+			.box.style2 .image {
+				left: 1.4em;
+				top: 1.4em;
+				margin: -2.8em 0 2.8em -2.8em;
+			}
+			.box.style2 h3 {
+				font-size: 1.1em;
+				margin-bottom: 0.2em;
+			}
+			.box.style2 p {
+				font-size: 0.9em;
+				margin-bottom: 0.5em;
+			}
+			/* Responsive sidebar */
+			@media screen and (max-width: 980px) {
+				#portfolio {
+					flex: 0 0 100% !important;
+					max-width: 100% !important;
+					border-left: none !important;
+					padding-left: 0 !important;
+					margin-top: 2em;
+				}
+				#portfolio ~ div {
+					flex: 0 0 100% !important;
+					max-width: 100% !important;
+					padding-right: 0 !important;
+				}
+			}
+		</style>
 	</head>
 	<body class="is-preload">
 
@@ -17,7 +72,8 @@
 			<nav id="nav">
 				<ul class="container">
 					<li><a href="#top">Top</a></li>
-					<li><a href="#projects">Projects</a></li>
+					<li><a href="#portfolio">Portfolio</a></li>
+					<li><a href="#projects">Papers</a></li>
 					<li><a href="#contact">Contact</a></li>
 				</ul>
 			</nav>
@@ -42,15 +98,79 @@
 
 
 
-		<!-- Projects -->
+		<!-- Research & Portfolio -->
 			<article id="projects" class="wrapper style3">
 				<div class="container">
-					<header>
-						<h2>Projects and blog posts.</h2>
-						<p>Research environments, experiments, and write-ups.</p>
-					</header>
-					<div class="row aln-center">
-						<div class="col-4 col-6-medium col-12-small">
+					<div style="display:flex; flex-wrap:wrap; align-items:flex-start;">
+						<div id="portfolio" style="order:2; flex:0 0 28%; max-width:28%; box-sizing:border-box; border-left:1px solid rgba(255,255,255,0.2); padding-left:2em;">
+							<header>
+								<h2><span class="icon solid fa-flask" style="margin-right:0.4em;"></span>Portfolio</h2>
+							</header>
+							<article class="box style2">
+								<a href="portfolio/agentic_pipeline_for_drugdiscovery/day1.html" class="image featured" style="position:relative; display:block; overflow:hidden; background:#0d1b2a; height:220px;">
+									<svg id="protein-ligand-vis" viewBox="0 0 260 220" width="100%" height="220" style="display:block;">
+										<!-- Background -->
+										<rect width="260" height="220" fill="#0d1b2a"/>
+										<!-- Protein backbone helix ribbons -->
+										<path d="M 30 110 Q 55 80 80 110 Q 105 140 130 110 Q 155 80 180 110 Q 205 140 230 110" fill="none" stroke="#4a9eff" stroke-width="4" stroke-linecap="round" opacity="0.7">
+											<animate attributeName="opacity" values="0.7;1;0.7" dur="3s" repeatCount="indefinite"/>
+										</path>
+										<path d="M 30 120 Q 55 90 80 120 Q 105 150 130 120 Q 155 90 180 120 Q 205 150 230 120" fill="none" stroke="#3b82f6" stroke-width="2.5" stroke-linecap="round" opacity="0.4"/>
+										<!-- Side chains -->
+										<line x1="55" y1="97" x2="55" y2="70" stroke="#60a5fa" stroke-width="1.5" opacity="0.6"/>
+										<circle cx="55" cy="65" r="5" fill="#60a5fa" opacity="0.8"/>
+										<line x1="105" y1="130" x2="105" y2="155" stroke="#60a5fa" stroke-width="1.5" opacity="0.6"/>
+										<circle cx="105" cy="160" r="5" fill="#60a5fa" opacity="0.8"/>
+										<line x1="155" y1="97" x2="155" y2="70" stroke="#60a5fa" stroke-width="1.5" opacity="0.6"/>
+										<circle cx="155" cy="65" r="5" fill="#60a5fa" opacity="0.8"/>
+										<line x1="205" y1="130" x2="205" y2="155" stroke="#60a5fa" stroke-width="1.5" opacity="0.6"/>
+										<circle cx="205" cy="160" r="5" fill="#60a5fa" opacity="0.8"/>
+										<!-- Ligand approaching binding site -->
+										<g id="ligand-group">
+											<animateTransform attributeName="transform" type="translate" values="0,0; 0,-18; 0,0" dur="3s" repeatCount="indefinite"/>
+											<!-- Acetazolamide-like scaffold -->
+											<polygon points="130,168 120,178 124,191 136,191 140,178" fill="none" stroke="#f59e0b" stroke-width="2"/>
+											<circle cx="130" cy="168" r="3" fill="#f59e0b"/>
+											<circle cx="120" cy="178" r="3" fill="#f59e0b"/>
+											<circle cx="140" cy="178" r="3" fill="#f59e0b"/>
+											<circle cx="130" cy="196" r="4" fill="#fbbf24" stroke="#f59e0b" stroke-width="1.5"/>
+											<text x="130" y="200" text-anchor="middle" font-family="monospace" font-size="6" fill="#0d1b2a" font-weight="bold">S</text>
+											<circle cx="115" cy="174" r="3.5" fill="#818cf8"/>
+											<text x="115" y="177" text-anchor="middle" font-family="monospace" font-size="5.5" fill="#fff">N</text>
+											<circle cx="145" cy="174" r="3.5" fill="#818cf8"/>
+											<text x="145" y="177" text-anchor="middle" font-family="monospace" font-size="5.5" fill="#fff">N</text>
+										</g>
+										<!-- Zn2+ ion in binding site -->
+										<circle cx="130" cy="108" r="7" fill="#a78bfa" stroke="#7c3aed" stroke-width="1.5">
+											<animate attributeName="r" values="7;8.5;7" dur="3s" repeatCount="indefinite"/>
+										</circle>
+										<text x="130" y="112" text-anchor="middle" font-family="monospace" font-size="7" fill="#fff" font-weight="bold">Zn</text>
+										<!-- Binding flash effect -->
+										<circle cx="130" cy="108" r="14" fill="none" stroke="#a78bfa" stroke-width="1" opacity="0">
+											<animate attributeName="r" values="8;22;8" dur="3s" repeatCount="indefinite"/>
+											<animate attributeName="opacity" values="0;0.6;0" dur="3s" repeatCount="indefinite"/>
+										</circle>
+										<!-- Labels -->
+										<rect x="5" y="4" width="120" height="16" rx="3" fill="#1e3a5f" opacity="0.8"/>
+										<text x="10" y="15" font-family="Helvetica Neue, sans-serif" font-size="8.5" fill="#93c5fd" font-weight="600">1CA2 + Acetazolamide</text>
+										<rect x="135" y="4" width="120" height="16" rx="3" fill="#1e3a5f" opacity="0.8"/>
+										<text x="140" y="15" font-family="Helvetica Neue, sans-serif" font-size="8.5" fill="#fcd34d" font-weight="600">OpenMM · OpenFF · PDBFixer</text>
+									</svg>
+								</a>
+								<h3><a href="portfolio/agentic_pipeline_for_drugdiscovery/day1.html">Agentic Protein/Ligand Pipeline</a></h3>
+								<p>My approach to build a fully self-contained environment for an LLM agent to run protein-ligand simulations — designed so it can iterate via Bayesian optimization or be made verifiable enough to train with GRPO.</p>
+								<ul class="actions">
+									<li><a class="button small" href="portfolio/agentic_pipeline_for_drugdiscovery/day1.html">(Almost) Daily Log</a></li>
+								</ul>
+							</article>
+							<p style="margin-top:1.5em; font-size:0.85em; opacity:0.75;">More demos coming soon.</p>
+						</div>
+						<div style="order:1; flex:0 0 66%; max-width:66%; box-sizing:border-box; padding-right:2em;">
+							<header>
+								<h2>Research &amp; Papers</h2>
+							</header>
+							<div class="row">
+								<div class="col-6 col-12-small">
 							<article class="box style2">
 								<a href="GRPO_For_Materials/blog_post.html" class="image featured" style="position:relative; display:block; overflow:hidden; background:#f8fafc;">
 									<div id="rl-crystal-vis" style="width:100%; height:220px; display:flex; align-items:center; justify-content:center;">
@@ -78,7 +198,7 @@
 								</ul>
 							</article>
 						</div>
-						<div class="col-4 col-6-medium col-12-small">
+								<div class="col-6 col-12-small">
 							<article class="box style2">
 								<a href="https://link.springer.com/article/10.1186/s13321-023-00765-1" class="image featured" target="_blank" rel="noopener noreferrer" style="position:relative; display:block; overflow:hidden; height:220px; background:#f8fafc;">
 									<iframe src="bloom_filter_animation.html" style="position:absolute; top:0; left:0; width:200%; height:200%; border:none; pointer-events:none; transform:scale(0.5); transform-origin:top left;" title="Bloom Filter Animation" loading="lazy"></iframe>
@@ -90,7 +210,7 @@
 								</ul>
 							</article>
 						</div>
-						<div class="col-4 col-6-medium col-12-small">
+								<div class="col-6 col-12-small">
 							<article class="box style2">
 								<a href="https://arxiv.org/abs/2305.10379" class="image featured" target="_blank" rel="noopener noreferrer"><img src="images/TOC_QBC_SR.png" alt="Active learning with constraints preview" /></a>
 								<h3><a href="https://arxiv.org/abs/2305.10379" target="_blank" rel="noopener noreferrer">Active Learning with Constraints in Symbolic Regression</a></h3>
@@ -101,7 +221,7 @@
 								</ul>
 							</article>
 						</div>
-						<div class="col-4 col-6-medium col-12-small">
+								<div class="col-6 col-12-small">
 							<article class="box style2">
 								<a href="https://chemrxiv.org/doi/full/10.26434/chemrxiv.15001652/v1" class="image featured" target="_blank" rel="noopener noreferrer"><img src="images/TOC_QDICL.png" alt="Bayesian optimization with LLMs preview" /></a>
 								<h3><a href="https://chemrxiv.org/doi/full/10.26434/chemrxiv.15001652/v1" target="_blank" rel="noopener noreferrer">Bayesian Optimization with LLMs for Materials</a></h3>
@@ -111,11 +231,20 @@
 								</ul>
 							</article>
 						</div>
+								<div class="col-6 col-12-small">
+							<article class="box style2">
+								<a href="https://iopscience.iop.org/article/10.1088/2632-2153/ae4b07" class="image featured" target="_blank" rel="noopener noreferrer"><img src="images/MDCrow_TOC.png" alt="MDCrow — automating molecular dynamics workflows with LLMs" /></a>
+								<h3><a href="https://iopscience.iop.org/article/10.1088/2632-2153/ae4b07" target="_blank" rel="noopener noreferrer">MDCrow: Automating MD Workflows with LLMs</a></h3>
+								<p>An LLM agent with 40+ expert-designed tools for automating molecular dynamics simulations, analysis, and multi-step protein workflows.</p>
+								<ul class="actions">
+									<li><a class="button small" href="https://iopscience.iop.org/article/10.1088/2632-2153/ae4b07" target="_blank" rel="noopener noreferrer">Paper</a></li>
+								</ul>
+							</article>
+						</div>
 					</div>
-					<footer>
-						<p>Want to collaborate or learn more?</p>
-						<a href="#contact" class="button large scrolly">Get in touch with me</a>
-					</footer>
+						</div>
+					</div>
+
 				</div>
 			</article>
 

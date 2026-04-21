@@ -1,0 +1,108 @@
+  <!-- RIGHT: Crystal Visualization -->
+    <div style="flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; position:relative; min-height:100%;">
+
+      <!-- State 0: Unrelaxed crystal (visible initially, hidden after Turn 1) -->
+      <div class="fragment fade-out" data-fragment-index="2" style="position:absolute; text-align:center;">
+        <div style="font-weight:700; color:#ef4444; font-size:0.7em; margin-bottom:0.4em;">⚠ Unrelaxed Structure</div>
+        <svg viewBox="0 0 260 280" width="320" height="340" style="filter:drop-shadow(0 2px 8px rgba(0,0,0,0.15));">
+          <!-- Unit cell - slightly distorted -->
+          <rect x="30" y="30" width="200" height="200" fill="none" stroke="#94a3b8" stroke-width="1.5" stroke-dasharray="6,3" rx="3"/>
+          <!-- Back face hint -->
+          <line x1="60" y1="15" x2="230" y2="15" stroke="#cbd5e1" stroke-width="1" stroke-dasharray="4,4" opacity="0.4"/>
+          <line x1="230" y1="15" x2="230" y2="215" stroke="#cbd5e1" stroke-width="1" stroke-dasharray="4,4" opacity="0.4"/>
+          <line x1="30" y1="30" x2="60" y2="15" stroke="#cbd5e1" stroke-width="1" stroke-dasharray="4,4" opacity="0.4"/>
+          <line x1="230" y1="30" x2="230" y2="15" stroke="#cbd5e1" stroke-width="1" stroke-dasharray="4,4" opacity="0.4"/>
+          <!-- Bonds -->
+          <line x1="55" y1="55" x2="138" y2="230" stroke="#64748b" stroke-width="1.5" opacity="0.5"/>
+          <line x1="210" y1="48" x2="138" y2="230" stroke="#64748b" stroke-width="1.5" opacity="0.5"/>
+          <line x1="55" y1="55" x2="210" y2="48" stroke="#64748b" stroke-width="1.5" opacity="0.5"/>
+          <line x1="55" y1="55" x2="30" y2="172" stroke="#64748b" stroke-width="1.5" opacity="0.5"/>
+          <line x1="210" y1="48" x2="220" y2="165" stroke="#64748b" stroke-width="1.5" opacity="0.5"/>
+          <!-- Ti atoms (blue) - slightly off-grid -->
+          <circle cx="55" cy="55" r="18" fill="#3b82f6" stroke="#1d4ed8" stroke-width="2"/>
+          <text x="55" y="60" text-anchor="middle" fill="white" font-size="13" font-weight="700">Ti</text>
+          <circle cx="210" cy="48" r="18" fill="#3b82f6" stroke="#1d4ed8" stroke-width="2"/>
+          <text x="210" y="53" text-anchor="middle" fill="white" font-size="13" font-weight="700">Ti</text>
+          <!-- H atoms (green) - displaced -->
+          <circle cx="138" cy="230" r="12" fill="#22c55e" stroke="#15803d" stroke-width="2"/>
+          <text x="138" y="235" text-anchor="middle" fill="white" font-size="11" font-weight="700">H</text>
+          <circle cx="30" cy="172" r="12" fill="#22c55e" stroke="#15803d" stroke-width="2"/>
+          <text x="30" y="177" text-anchor="middle" fill="white" font-size="11" font-weight="700">H</text>
+          <circle cx="220" cy="165" r="12" fill="#22c55e" stroke="#15803d" stroke-width="2"/>
+          <text x="220" y="170" text-anchor="middle" fill="white" font-size="11" font-weight="700">H</text>
+          <!-- Energy label -->
+          <rect x="60" y="248" width="140" height="26" rx="4" fill="#fef2f2" stroke="#fca5a5" stroke-width="1"/>
+          <text x="130" y="265" text-anchor="middle" fill="#dc2626" font-size="12" font-weight="600">E<tspan baseline-shift="sub" font-size="9">f</tspan> = 0.34 eV/atom</text>
+        </svg>
+      </div>
+
+      <!-- State 1: After Turn 1 (appears at fragment 2, hides at 5) -->
+      <div class="fragment fade-in" data-fragment-index="2" style="position:absolute; text-align:center;">
+        <div class="fragment fade-out" data-fragment-index="5">
+          <div style="font-weight:700; color:#f97316; font-size:0.7em; margin-bottom:0.4em;">Turn 1 — Partially Relaxed</div>
+          <svg viewBox="0 0 260 280" width="320" height="340" style="filter:drop-shadow(0 2px 8px rgba(0,0,0,0.15));">
+            <!-- Unit cell - cleaner -->
+            <rect x="30" y="30" width="200" height="200" fill="none" stroke="#94a3b8" stroke-width="1.5" stroke-dasharray="6,3" rx="3"/>
+            <line x1="55" y1="18" x2="230" y2="18" stroke="#cbd5e1" stroke-width="1" stroke-dasharray="4,4" opacity="0.4"/>
+            <line x1="230" y1="18" x2="230" y2="218" stroke="#cbd5e1" stroke-width="1" stroke-dasharray="4,4" opacity="0.4"/>
+            <line x1="30" y1="30" x2="55" y2="18" stroke="#cbd5e1" stroke-width="1" stroke-dasharray="4,4" opacity="0.4"/>
+            <line x1="230" y1="30" x2="230" y2="18" stroke="#cbd5e1" stroke-width="1" stroke-dasharray="4,4" opacity="0.4"/>
+            <!-- Bonds -->
+            <line x1="50" y1="50" x2="130" y2="210" stroke="#64748b" stroke-width="1.5" opacity="0.5"/>
+            <line x1="200" y1="50" x2="130" y2="210" stroke="#64748b" stroke-width="1.5" opacity="0.5"/>
+            <line x1="50" y1="50" x2="200" y2="50" stroke="#64748b" stroke-width="1.5" opacity="0.5"/>
+            <line x1="50" y1="50" x2="50" y2="170" stroke="#64748b" stroke-width="1.5" opacity="0.5"/>
+            <line x1="200" y1="50" x2="200" y2="170" stroke="#64748b" stroke-width="1.5" opacity="0.5"/>
+            <!-- Ti atoms - better positioned -->
+            <circle cx="50" cy="50" r="18" fill="#3b82f6" stroke="#1d4ed8" stroke-width="2"/>
+            <text x="50" y="55" text-anchor="middle" fill="white" font-size="13" font-weight="700">Ti</text>
+            <circle cx="200" cy="50" r="18" fill="#3b82f6" stroke="#1d4ed8" stroke-width="2"/>
+            <text x="200" y="55" text-anchor="middle" fill="white" font-size="13" font-weight="700">Ti</text>
+            <!-- H atoms - closer to correct -->
+            <circle cx="130" cy="210" r="12" fill="#22c55e" stroke="#15803d" stroke-width="2"/>
+            <text x="130" y="215" text-anchor="middle" fill="white" font-size="11" font-weight="700">H</text>
+            <circle cx="50" cy="170" r="12" fill="#22c55e" stroke="#15803d" stroke-width="2"/>
+            <text x="50" y="175" text-anchor="middle" fill="white" font-size="11" font-weight="700">H</text>
+            <circle cx="200" cy="170" r="12" fill="#22c55e" stroke="#15803d" stroke-width="2"/>
+            <text x="200" y="175" text-anchor="middle" fill="white" font-size="11" font-weight="700">H</text>
+            <!-- Energy label -->
+            <rect x="60" y="248" width="140" height="26" rx="4" fill="#fffbeb" stroke="#fcd34d" stroke-width="1"/>
+            <text x="130" y="265" text-anchor="middle" fill="#d97706" font-size="12" font-weight="600">E<tspan baseline-shift="sub" font-size="9">f</tspan> = 0.12 eV/atom</text>
+          </svg>
+        </div>
+      </div>
+
+      <!-- State 2: After Turn 2 (appears at fragment 5) -->
+      <div class="fragment fade-in" data-fragment-index="5" style="position:absolute; text-align:center;">
+        <div style="font-weight:700; color:#22c55e; font-size:0.7em; margin-bottom:0.4em;">Turn 2 — Relaxed ✓</div>
+        <svg viewBox="0 0 260 280" width="320" height="340" style="filter:drop-shadow(0 2px 8px rgba(0,0,0,0.15));">
+          <!-- Unit cell - clean -->
+          <rect x="30" y="30" width="200" height="200" fill="none" stroke="#94a3b8" stroke-width="1.5" stroke-dasharray="6,3" rx="3"/>
+          <line x1="55" y1="18" x2="230" y2="18" stroke="#cbd5e1" stroke-width="1" stroke-dasharray="4,4" opacity="0.4"/>
+          <line x1="230" y1="18" x2="230" y2="218" stroke="#cbd5e1" stroke-width="1" stroke-dasharray="4,4" opacity="0.4"/>
+          <line x1="30" y1="30" x2="55" y2="18" stroke="#cbd5e1" stroke-width="1" stroke-dasharray="4,4" opacity="0.4"/>
+          <line x1="230" y1="30" x2="230" y2="18" stroke="#cbd5e1" stroke-width="1" stroke-dasharray="4,4" opacity="0.4"/>
+          <!-- Bonds - symmetric -->
+          <line x1="45" y1="45" x2="130" y2="200" stroke="#64748b" stroke-width="1.5" opacity="0.5"/>
+          <line x1="205" y1="45" x2="130" y2="200" stroke="#64748b" stroke-width="1.5" opacity="0.5"/>
+          <line x1="45" y1="45" x2="205" y2="45" stroke="#64748b" stroke-width="1.5" opacity="0.5"/>
+          <line x1="45" y1="45" x2="45" y2="165" stroke="#64748b" stroke-width="1.5" opacity="0.5"/>
+          <line x1="205" y1="45" x2="205" y2="165" stroke="#64748b" stroke-width="1.5" opacity="0.5"/>
+          <line x1="45" y1="165" x2="205" y2="165" stroke="#64748b" stroke-width="1.5" opacity="0.5"/>
+          <!-- Ti atoms - on lattice -->
+          <circle cx="45" cy="45" r="18" fill="#3b82f6" stroke="#1d4ed8" stroke-width="2"/>
+          <text x="45" y="50" text-anchor="middle" fill="white" font-size="13" font-weight="700">Ti</text>
+          <circle cx="205" cy="45" r="18" fill="#3b82f6" stroke="#1d4ed8" stroke-width="2"/>
+          <text x="205" y="50" text-anchor="middle" fill="white" font-size="13" font-weight="700">Ti</text>
+          <!-- H atoms - symmetric positions -->
+          <circle cx="130" cy="200" r="12" fill="#22c55e" stroke="#15803d" stroke-width="2"/>
+          <text x="130" y="205" text-anchor="middle" fill="white" font-size="11" font-weight="700">H</text>
+          <circle cx="45" cy="165" r="12" fill="#22c55e" stroke="#15803d" stroke-width="2"/>
+          <text x="45" y="170" text-anchor="middle" fill="white" font-size="11" font-weight="700">H</text>
+          <circle cx="205" cy="165" r="12" fill="#22c55e" stroke="#15803d" stroke-width="2"/>
+          <text x="205" y="170" text-anchor="middle" fill="white" font-size="11" font-weight="700">H</text>
+          <!-- Energy label -->
+          <rect x="55" y="248" width="150" height="26" rx="4" fill="#f0fdf4" stroke="#86efac" stroke-width="1"/>
+          <text x="130" y="265" text-anchor="middle" fill="#16a34a" font-size="12" font-weight="600">E<tspan baseline-shift="sub" font-size="9">f</tspan> = 0.025 eV/atom ✓</text>
+        </svg>
+      </div>
