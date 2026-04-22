@@ -91,13 +91,20 @@
         </header>
 
         <section class="prose prose-indigo lg:prose-xl dark:prose-invert">
+            <div class="bg-indigo-50 dark:bg-indigo-900/20 border-l-4 border-indigo-500 p-6 mb-8 rounded-r-lg not-prose">
+                <h2 class="text-lg font-bold text-indigo-900 dark:text-indigo-100 mb-2">TL;DR</h2>
+                <p class="text-indigo-900 dark:text-indigo-100 leading-relaxed m-0">
+                    This project trains language models with reinforcement learning to generate relaxed crystal structures directly as CIF files. A fine-tuned CHGNet model provides formation-energy and force signals, while separate rubric and heuristic checks handle validity, composition, and bond geometry, making crystal generation a verifiable RL task. The main result is that model scale changes not just performance, but reasoning style: the larger model develops richer crystallographic reasoning, while the smaller model compresses its reasoning and plateaus on the hardest physics objective.
+                </p>
+            </div>
+
             <p class="text-lg text-gray-700 dark:text-gray-300 mb-6">
-                This project trains LLMs with reinforcement learning to directly propose relaxed crystal structures in a single forward pass, replacing the iterative self-consistent field loop of density functional theory. Crystal relaxation is a <strong>verifiable task</strong>: generating a stable crystal structure is difficult, but checking one is computationally cheap using a neural network potential. This verification asymmetry makes the problem a natural fit for Group Relative Policy Optimization (GRPO), which requires only a scalar reward from a verifier and no learned value function. A fine-tuned CHGNet model serves as the verifier, and the resulting analysis at two model scales reveals that size determines the qualitative reasoning strategy rather than simply modulating performance magnitude.
+                This project trains LLMs with reinforcement learning to directly propose relaxed crystal structures in a single forward pass, trying to either approximate DFT results or complement it. Crystal relaxation is a <strong>verifiable task</strong>: generating a stable crystal structure is difficult, but checking one is computationally cheap using a neural network potential. This verification asymmetry makes the problem a natural fit for Group Relative Policy Optimization (GRPO), which requires only a scalar reward from a verifier and no learned value function. A fine-tuned CHGNet model provides the formation-energy and force signals inside that verifier, while separate rubric and heuristic checks handle the rest, and the resulting analysis at two model scales reveals that size of the model determines the qualitative reasoning strategy rather than simply modulating performance magnitude.
             </p>
 
             <h2 class="text-2xl font-bold mt-10 mb-4">The Challenge: Stable Structures Occupy a Tiny Corner of Structure Space</h2>
             <p class="mb-6">
-                Reliable generation of stable crystal structures is a key enabler for closed-loop materials discovery. Physically plausible candidates occupy a small subset of all periodic atomic arrangements, near local minima of the quantum-mechanical energy landscape, while brute-force structure search and first-principles validation are computationally expensive. Generative models aim to learn the distribution of known stable crystals and rapidly propose new candidates that can subsequently be verified and relaxed.
+                Reliable generation of stable crystal structures is a key enabler for closed-loop materials discovery. Physically plausible candidates occupy a small subset of all periodic atomic arrangements, near local minima of the quantum-mechanical energy landscape, while structure search and first-principles validation are computationally expensive. An alternative that is gaining a lot of interest is the use of generative models, generative models aim to learn the distribution of known stable crystals and rapidly propose new candidates that can subsequently be verified and relaxed.
             </p>
             <p class="mb-6">
                 A variety of deep generative approaches have been explored for crystalline materials, including variational autoencoders (VAEs), generative adversarial networks (GANs), and more recent diffusion-based models designed to respect symmetry and periodicity. Ensuring validity and stability remains challenging in part because crystal representations must handle rotational and translational invariance, permutation invariance, and periodic boundary conditions.
@@ -106,7 +113,7 @@
                 Among symmetry-aware diffusion approaches, the Crystal Diffusion Variational Autoencoder (CDVAE) [1] formulates crystal generation as a conditional score network that generates 3D atomic structures through a diffusion and denoising process. In practice, samples from CDVAE are produced by annealed Langevin dynamics that iteratively denoise noisy atom coordinates conditioned on a latent code, effectively acting as a learned refinement step that pushes structures toward lower-energy configurations. In downstream workflows, generated structures are typically further relaxed and validated with DFT to assess stability.
             </p>
             <p class="mb-6">
-                With the appearance of reasoning language models and the recent push for using transformers in crystal generation, this project asks: can a large language model trained with reinforcement learning learn to propose relaxed crystal structures directly? We reformulate the problem as a <strong>verifiable task</strong>: a setting where generating a correct solution is hard, but checking one is straightforward. Given a proposed CIF string, a neural network potential can evaluate its formation energy and forces, and bond validity can be checked by fast heuristics, providing a deterministic reward signal without any learned critic. This verification asymmetry is the same property that has made RL effective for mathematical reasoning [4] and code generation, where unit tests serve as verifiers. Here, the verifier is a fine-tuned CHGNet model, and the RL algorithm is GRPO, which samples multiple candidate structures, scores each against the verifier, and updates the policy using relative rankings within the group.
+                With the appearance of reasoning language models and the recent push for using transformers in crystal generation, this project asks: can a large language model trained with reinforcement learning learn to propose relaxed crystal structures directly? I reformulate the problem as a <strong>verifiable task</strong>: a setting where generating a correct solution is hard, but checking one is straightforward. Given a proposed CIF string<sup><a href="#ref-cif" class="text-indigo-600 hover:underline">[7]</a></sup>, a neural network potential can evaluate its formation energy and forces, and bond validity can be checked by fast heuristics, providing a deterministic reward signal without any learned critic. This verification asymmetry is the same property that has made RL effective for mathematical reasoning [4] and code generation, where unit tests serve as verifiers. Here, the verifier combines a fine-tuned CHGNet model for formation energy and forces with separate rubric checks, and the RL algorithm is GRPO, which samples multiple candidate structures, scores each against the verifier, and updates the policy using relative rankings within the group.
             </p>
 
             <div class="bg-indigo-50 dark:bg-indigo-900/20 border-l-4 border-indigo-500 p-6 my-8 rounded-r-lg">
@@ -114,7 +121,7 @@
                 <ul class="list-disc list-inside text-indigo-900 dark:text-indigo-100 space-y-2">
                     <li><strong>State Space:</strong> CIF string encoding lattice vectors (<em>a, b, c, α, β, γ</em>), space group, and fractional Wyckoff coordinates for each atom. Dimensionality scales with system size (typically 3N + 6 degrees of freedom).</li>
                     <li><strong>Action Space:</strong> Discrete token space over CIF text. Effectively encodes continuous atomic displacements (δx, δy, δz per atom) and lattice strain tensors (ε<sub>ij</sub>) through text generation.</li>
-                    <li><strong>Reward:</strong> Weighted sum R = 0.10·r<sub>fmt</sub> + 0.15·r<sub>comp</sub> + 0.60·r<sub>E<sub>f</sub></sub> + 0.24·r<sub>F</sub> + 0.15·r<sub>bond</sub>, computed by a CHGNet inference server wrapped in the Prime Intellect <code>verifiers</code> library.</li>
+                    <li><strong>Reward:</strong> Relative-weighted sum R ∝ 0.10·r<sub>fmt</sub> + 0.15·r<sub>comp</sub> + 0.60·r<sub>E<sub>f</sub></sub> + 0.24·r<sub>F</sub> + 0.15·r<sub>bond</sub>, with those weights renormalized internally before aggregation by a CHGNet inference server wrapped in the Prime Intellect <code>verifiers</code> library.</li>
                     <li><strong>Training algorithm:</strong> GRPO samples <em>G</em> rollouts per prompt and optimizes the policy relative to the group mean reward, without a learned critic.</li>
                 </ul>
             </div>
@@ -146,7 +153,8 @@
             </div>
 
             <h2 class="text-2xl font-bold mt-10 mb-4">🔮 The Model: Fine-tuned CHGNet</h2>
-            
+
+            <div data-tab-scope>
             <!-- Tabs -->
             <div class="border-b border-gray-200 dark:border-gray-700 mb-6">
                 <div class="flex space-x-1">
@@ -166,7 +174,7 @@
                 <p class="mb-4">
                     The model predicts four targets simultaneously: total energy <em>E</em>, per-atom forces <strong>F</strong> = −∂E/∂<strong>r</strong>, 
                     virial stress tensor <strong>σ</strong>, and site magnetic moments <em>m</em>. 
-                    This multi-task formulation is critical for RL reward computation: we use <em>E</em> for the formation energy rubric and ‖<strong>F</strong>‖ for the forces rubric.
+                    This multi-task formulation is critical for RL reward computation: I use <em>E</em> for the formation energy rubric and ‖<strong>F</strong>‖ for the forces rubric.
                 </p>
                 <p class="mb-6">
                     To reduce systematic bias on the filtered mp-20 subset, I fine-tuned the pretrained CHGNet checkpoint:
@@ -189,7 +197,7 @@
                     on the low-energy filtered subset—the baseline CHGNet was trained on the full Materials Project including 
                     high-energy structures, so its prediction distribution is shifted. 
                     After fine-tuning, the MAE on formation energy dropped from ~0.21 eV/atom (baseline) to ~0.08 eV/atom on 
-                    the test split, keeping reward noise within the 0.1 eV/atom threshold that defines our stability criterion.
+                    the test split, keeping reward noise within the 0.1 eV/atom threshold that defines my stability criterion.
                 </p>
                 
                 <div class="bg-indigo-100 dark:bg-indigo-900/40 border border-indigo-300 dark:border-indigo-700 rounded-lg p-4 mt-6">
@@ -197,7 +205,7 @@
                         🔬 Curious about the optimal hyperparameters?
                     </p>
                     <p class="text-indigo-800 dark:text-indigo-200 text-sm mb-3">
-                        We tested 72 different configurations to find the best setup. 
+                        I tested 72 different configurations to find the best setup. 
                         <a href="chgnet_finetuning_results.html" class="underline font-semibold hover:text-indigo-600 dark:hover:text-indigo-400">
                             View the complete hyperparameter sweep results →
                         </a>
@@ -299,7 +307,7 @@ print(f"R² score: {r2:.4f}, MAE: {mae:.4f} eV/atom")</code></pre>
 
                 <h3 class="text-lg font-bold mt-8 mb-3">6. Results Visualization</h3>
                 <p class="text-gray-600 dark:text-gray-400 mb-4">
-                    We compare the model's predictions before and after fine-tuning to demonstrate the improvement:
+                    I compare the model's predictions before and after fine-tuning to demonstrate the improvement:
                 </p>
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
                     <div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-4">
@@ -324,7 +332,7 @@ print(f"R² score: {r2:.4f}, MAE: {mae:.4f} eV/atom")</code></pre>
                 <div class="bg-gradient-to-r from-indigo-50 to-purple-50 dark:from-indigo-900/40 dark:to-purple-900/40 border-2 border-indigo-300 dark:border-indigo-700 rounded-lg p-6 mt-8">
                     <h4 class="font-bold text-indigo-900 dark:text-indigo-100 mb-3 text-lg">🔬 Complete Hyperparameter Sweep Results</h4>
                     <p class="text-indigo-800 dark:text-indigo-200 mb-4">
-                        Want to see the full story? We conducted a comprehensive grid search over 72 configurations, 
+                        Want to see the full story? I conducted a comprehensive grid search over 72 configurations, 
                         testing different dataset sizes (100-2000 samples), batch sizes, learning rates, and epoch counts.
                     </p>
                     <a href="chgnet_finetuning_results.html" 
@@ -336,8 +344,11 @@ print(f"R² score: {r2:.4f}, MAE: {mae:.4f} eV/atom")</code></pre>
                     </p>
                 </div>
             </div>
+            </div>
 
             <h2 class="text-2xl font-bold mt-10 mb-4">The RL Environment: Multi-Turn Crystal Relaxation</h2>
+
+            <div data-tab-scope>
             
             <!-- Environment Tabs -->
             <div class="border-b border-gray-200 dark:border-gray-700 mb-6">
@@ -403,8 +414,7 @@ print(f"R² score: {r2:.4f}, MAE: {mae:.4f} eV/atom")</code></pre>
                     <div class="flex items-start space-x-3">
                         <span class="text-2xl">3️⃣</span>
                         <div>
-                            <strong>Evaluation:</strong> CHGNet evaluates the proposed structure across multiple rubrics, 
-                            computing energies, forces, and bond lengths.
+                            <strong>Evaluation:</strong> CHGNet evaluates formation energy and forces, while separate rubric and heuristic checks handle bond lengths and the non-physics constraints.
                         </div>
                     </div>
                     <div class="flex items-start space-x-3">
@@ -572,7 +582,7 @@ print(f"R² score: {r2:.4f}, MAE: {mae:.4f} eV/atom")</code></pre>
                 </script>
 
                 <h3 class="text-lg font-bold mt-6 mb-3">Reward Structure</h3>
-                <p class="mb-3">The total reward is a weighted sum of individual rubric scores. For a detailed discussion of how these weights were chosen and the pitfalls encountered along the way, see <a href="lessons_about_rewards.html" class="text-blue-600 dark:text-blue-400 underline hover:text-blue-800 dark:hover:text-blue-200">Lessons from Designing Rewards</a>.</p>
+                <p class="mb-3">The total reward is a weighted sum of individual rubric scores. For a detailed discussion of how these weights were chosen and the pitfalls encountered along the way, see <a href="lessons_about_rewards.html" class="text-blue-600 dark:text-blue-400 underline hover:text-blue-800 dark:hover:text-blue-200">Lessons from Designing Rewards for Crystal Generation</a>.</p>
                 <div class="bg-gray-50 border border-gray-200 p-4 rounded-lg">
                     <table class="w-full text-sm">
                         <thead>
@@ -612,8 +622,8 @@ print(f"R² score: {r2:.4f}, MAE: {mae:.4f} eV/atom")</code></pre>
                     </table>
                 </div>
                 <p class="text-sm text-gray-600 dark:text-gray-400 mt-3">
-                    <strong>Note:</strong> Formation energy has the highest weight (60%) as it's the primary indicator 
-                    of structural stability.
+                    <strong>Note:</strong> Formation energy has the highest relative weight (60%) as the primary indicator 
+                    of structural stability, and the displayed weights are renormalized internally before aggregation so the effective mixture sums to 1.0.
                 </p>
             </div>
             
@@ -624,9 +634,9 @@ print(f"R² score: {r2:.4f}, MAE: {mae:.4f} eV/atom")</code></pre>
                     Ensures the agent produces syntactically valid CIF files and properly uses the answer tags.
                 </p>
                 
-                <div class="bg-blue-50 dark:bg-blue-900/40 border-l-4 border-blue-500 dark:border-blue-700 p-4 mb-4">
-                    <h4 class="font-bold text-blue-900 dark:text-blue-100 mb-2">What It Checks:</h4>
-                    <ul class="list-disc list-inside text-blue-900 dark:text-blue-100 space-y-1">
+                <div class="bg-green-50 dark:bg-green-900/40 border-l-4 border-green-500 dark:border-green-700 p-4 mb-4">
+                    <h4 class="font-bold text-green-900 dark:text-green-100 mb-2">What It Checks:</h4>
+                    <ul class="list-disc list-inside text-green-900 dark:text-green-100 space-y-1">
                         <li>CIF string is present between <code>&lt;|answer_start|&gt;</code> and <code>&lt;|answer_end|&gt;</code> tags</li>
                         <li>CIF can be parsed by pymatgen's <code>CifParser</code></li>
                         <li>Structure contains valid crystallographic data</li>
@@ -635,10 +645,7 @@ print(f"R² score: {r2:.4f}, MAE: {mae:.4f} eV/atom")</code></pre>
                 </div>
                 
                 <h4 class="font-bold mb-2">Scoring:</h4>
-                <pre class="bg-gray-900 text-gray-100 p-4 rounded-lg text-sm mb-4"><code>if CIF successfully parsed:
-    reward = 1.0 * weight (0.10)
-else:
-    reward = 0.0</code></pre>
+                <pre class="bg-gray-900 text-gray-100 p-4 rounded-lg text-sm mb-4"><code>reward = 0.1 if cif_successfully_parsed else 0.0</code></pre>
                 
                 <p class="text-gray-700 dark:text-gray-300">
                     <strong>Why it matters:</strong> Without a valid CIF, the structure cannot be evaluated by CHGNet. 
@@ -670,10 +677,11 @@ else:
 cif_composition = structure.composition.reduced_composition
 target_composition = Composition(target_formula).reduced_composition
 
-if ElementComparator().are_equal(cif_composition, target_composition):
-    reward = 1.0 * weight (0.15)
-else:
-    reward = 0.0</code></pre>
+composition_matches = ElementComparator().are_equal(
+    cif_composition,
+    target_composition,
+)
+reward = 0.15 if composition_matches else 0.0</code></pre>
                 
                 <p class="text-gray-700 dark:text-gray-300">
                     <strong>Why it matters:</strong> The chemical composition fundamentally determines material properties—an agent that generates NaCl₂ instead of NaCl has failed at a basic chemistry level.
@@ -688,9 +696,9 @@ else:
                     The <strong>most important rubric</strong>—evaluates thermodynamic stability through formation energy.
                 </p>
                 
-                <div class="bg-yellow-50 dark:bg-yellow-900/40 border-l-4 border-yellow-500 dark:border-yellow-700 p-4 mb-4">
-                    <h4 class="font-bold text-yellow-900 dark:text-yellow-100 mb-2">What It Checks:</h4>
-                    <ul class="list-disc list-inside text-yellow-900 dark:text-yellow-100 space-y-1">
+                <div class="bg-green-50 dark:bg-green-900/40 border-l-4 border-green-500 dark:border-green-700 p-4 mb-4">
+                    <h4 class="font-bold text-green-900 dark:text-green-100 mb-2">What It Checks:</h4>
+                    <ul class="list-disc list-inside text-green-900 dark:text-green-100 space-y-1">
                         <li>Formation energy per atom &lt; 0.1 eV/atom (threshold)</li>
                         <li>Calculated using fine-tuned CHGNet model</li>
                         <li>Lower energy = more stable structure = higher reward</li>
@@ -712,10 +720,10 @@ else:
                     </div>
 
                     <!-- Linear -->
-                    <div class="bg-white dark:bg-gray-800 border dark:border-gray-700 rounded-lg p-4 shadow-sm ring-2 ring-blue-100 dark:ring-blue-900">
+                    <div class="bg-white dark:bg-gray-800 border dark:border-gray-700 rounded-lg p-4 shadow-sm ring-2 ring-green-100 dark:ring-green-900">
                         <div class="flex items-center justify-between mb-1">
-                            <h5 class="font-bold text-blue-800 dark:text-blue-200">2. Linear Reward (Default)</h5>
-                            <span class="bg-blue-100 dark:bg-blue-900/60 text-blue-800 dark:text-blue-200 text-xs px-2 py-1 rounded">Recommended</span>
+                            <h5 class="font-bold text-green-800 dark:text-green-200">2. Linear Reward (Default)</h5>
+                            <span class="bg-green-100 dark:bg-green-900/60 text-green-800 dark:text-green-200 text-xs px-2 py-1 rounded">Recommended</span>
                         </div>
                         <p class="text-xs text-gray-600 dark:text-gray-400 mb-2">Continuous feedback. Decays linearly as energy rises above threshold.</p>
                         <pre class="bg-gray-900 text-gray-100 p-3 rounded text-xs overflow-x-auto"><code>def formation_energy_linear(..., threshold=0.1, max_penalty=2.0):
@@ -740,9 +748,9 @@ else:
                     </div>
                 </div>
                 
-                <div class="bg-red-50 dark:bg-red-900/40 border-l-4 border-red-500 dark:border-red-700 p-4 mb-4">
-                    <h4 class="font-bold text-red-900 dark:text-red-100 mb-2">⚠️ Critical Threshold</h4>
-                    <p class="text-red-900 dark:text-red-100">
+                <div class="bg-green-50 dark:bg-green-900/40 border-l-4 border-green-500 dark:border-green-700 p-4 mb-4">
+                    <h4 class="font-bold text-green-900 dark:text-green-100 mb-2">⚠️ Critical Threshold</h4>
+                    <p class="text-green-900 dark:text-green-100">
                         Structures with formation energy above 0.1 eV/atom are considered thermodynamically 
                         <strong>unstable</strong> and unlikely to exist naturally. The agent must learn to 
                         minimize this value through proper atomic positioning and lattice parameters.
@@ -763,9 +771,9 @@ else:
                     Measures how well-relaxed the structure is by examining forces on individual atoms.
                 </p>
                 
-                <div class="bg-purple-50 dark:bg-purple-900/40 border-l-4 border-purple-500 dark:border-purple-700 p-4 mb-4">
-                    <h4 class="font-bold text-purple-900 dark:text-purple-100 mb-2">What It Checks:</h4>
-                    <ul class="list-disc list-inside text-purple-900 dark:text-purple-100 space-y-1">
+                <div class="bg-green-50 dark:bg-green-900/40 border-l-4 border-green-500 dark:border-green-700 p-4 mb-4">
+                    <h4 class="font-bold text-green-900 dark:text-green-100 mb-2">What It Checks:</h4>
+                    <ul class="list-disc list-inside text-green-900 dark:text-green-100 space-y-1">
                         <li>Maximum force on any atom &lt; threshold (typically 0.5 eV/Å)</li>
                         <li>Average force magnitude across all atoms</li>
                         <li>Indicates if atoms are in equilibrium positions</li>
@@ -787,10 +795,10 @@ else:
                     </div>
 
                     <!-- Continuous Decay -->
-                    <div class="bg-white dark:bg-gray-800 border dark:border-gray-700 rounded-lg p-4 shadow-sm ring-2 ring-purple-100 dark:ring-purple-900">
+                    <div class="bg-white dark:bg-gray-800 border dark:border-gray-700 rounded-lg p-4 shadow-sm ring-2 ring-green-100 dark:ring-green-900">
                         <div class="flex items-center justify-between mb-1">
-                            <h5 class="font-bold text-purple-800 dark:text-purple-200">2. Continuous Decay (Default)</h5>
-                            <span class="bg-purple-100 dark:bg-purple-900/60 text-purple-800 dark:text-purple-200 text-xs px-2 py-1 rounded">Recommended</span>
+                            <h5 class="font-bold text-green-800 dark:text-green-200">2. Continuous Decay (Default)</h5>
+                            <span class="bg-green-100 dark:bg-green-900/60 text-green-800 dark:text-green-200 text-xs px-2 py-1 rounded">Recommended</span>
                         </div>
                         <p class="text-xs text-gray-600 dark:text-gray-400 mb-2">Smoothly penalizes larger forces. Even imperfect structures get some credit, guiding the gradient.</p>
                         <pre class="bg-gray-900 text-gray-100 p-3 rounded text-xs overflow-x-auto"><code>def forces_continuous_decay(..., decay=1.0):
@@ -831,9 +839,9 @@ else:
                     Validates that interatomic distances are chemically reasonable based on atomic radii and bond types.
                 </p>
                 
-                <div class="bg-teal-50 dark:bg-teal-900/40 border-l-4 border-teal-500 dark:border-teal-700 p-4 mb-4">
-                    <h4 class="font-bold text-teal-900 dark:text-teal-100 mb-2">What It Checks:</h4>
-                    <ul class="list-disc list-inside text-teal-900 dark:text-teal-100 space-y-1">
+                <div class="bg-green-50 dark:bg-green-900/40 border-l-4 border-green-500 dark:border-green-700 p-4 mb-4">
+                    <h4 class="font-bold text-green-900 dark:text-green-100 mb-2">What It Checks:</h4>
+                    <ul class="list-disc list-inside text-green-900 dark:text-green-100 space-y-1">
                         <li>Bond lengths fall within expected ranges (±32% tolerance)</li>
                         <li>Accounts for ionic vs covalent bonding (electronegativity difference)</li>
                         <li>Special handling for hydrogen bonds (more flexible)</li>
@@ -851,16 +859,14 @@ else:
                         <p class="text-xs text-gray-600 dark:text-gray-400 mb-2">Binary accept/reject. Only rewards structures where the global bond score exceeds a threshold.</p>
                         <pre class="bg-gray-900 text-gray-100 p-3 rounded text-xs overflow-x-auto"><code>def bond_lengths_discrete(..., threshold=0.75):
     # score = bond_length_reasonableness_score(structure)
-    if not score or score < 0:
-        return 0.0
     return 1.0 if score >= threshold else 0.0</code></pre>
                     </div>
 
                     <!-- Continuous -->
-                    <div class="bg-white dark:bg-gray-800 border dark:border-gray-700 rounded-lg p-4 shadow-sm ring-2 ring-teal-100 dark:ring-teal-900/40">
+                        <div class="bg-white dark:bg-gray-800 border dark:border-gray-700 rounded-lg p-4 shadow-sm ring-2 ring-green-100 dark:ring-green-900/40">
                          <div class="flex items-center justify-between mb-1">
-                            <h5 class="font-bold text-teal-800 dark:text-teal-200">2. Continuous Reward (Default)</h5>
-                            <span class="bg-teal-100 dark:bg-teal-900/60 text-teal-800 dark:text-teal-200 text-xs px-2 py-1 rounded">Recommended</span>
+                            <h5 class="font-bold text-green-800 dark:text-green-200">2. Continuous Reward (Default)</h5>
+                            <span class="bg-green-100 dark:bg-green-900/60 text-green-800 dark:text-green-200 text-xs px-2 py-1 rounded">Recommended</span>
                         </div>
                         <p class="text-xs text-gray-600 dark:text-gray-400 mb-2">Returns the raw reasonableness score (0.0 to 1.0), encouraging incremental improvements.</p>
                         <pre class="bg-gray-900 text-gray-100 p-3 rounded text-xs overflow-x-auto"><code>def bond_lengths_continuous(..., **kwargs):
@@ -872,9 +878,9 @@ else:
                     </div>
                 </div>
 
-                <div class="bg-orange-50 dark:bg-orange-900/40 border-l-4 border-orange-500 dark:border-orange-700 p-4 mb-4">
-                    <h4 class="font-bold text-orange-900 dark:text-orange-100 mb-2">Common Failures:</h4>
-                    <ul class="list-disc list-inside text-orange-900 dark:text-orange-100 space-y-1">
+                <div class="bg-green-50 dark:bg-green-900/40 border-l-4 border-green-500 dark:border-green-700 p-4 mb-4">
+                    <h4 class="font-bold text-green-900 dark:text-green-100 mb-2">Common Failures:</h4>
+                    <ul class="list-disc list-inside text-green-900 dark:text-green-100 space-y-1">
                         <li>Atoms too close → unphysical overlap</li>
                         <li>Atoms too far → weak/nonexistent bonding</li>
                         <li>Incorrect lattice parameters → compressed/expanded structure</li>
@@ -887,12 +893,13 @@ else:
                     the agent's geometric proposals.
                 </p>
             </div>
+            </div>
 
             <!-- Eval Environment Callout -->
             <div class="bg-gradient-to-r from-blue-50 to-cyan-50 dark:from-blue-900/40 dark:to-cyan-900/40 border-2 border-blue-300 dark:border-blue-700 rounded-lg p-6 mt-8 mb-8">
                 <h4 class="font-bold text-blue-900 dark:text-blue-100 mb-3 text-lg">🧪 Evaluation-Only Environment</h4>
                 <p class="text-blue-800 dark:text-blue-200 mb-4">
-                    In addition to the RL training environment described above, we've created a separate 
+                    In addition to the RL training environment described above, I created a separate 
                     <strong>evaluation benchmark</strong> designed specifically to measure LLM progress on crystal 
                     reasoning, materials science concepts, and structured scientific outputs.
                 </p>
@@ -965,11 +972,11 @@ else:
                     </div>
                     <div>
                         <h4 class="font-bold text-red-800 dark:text-red-300 mb-1">2. Redundant rubrics increase variance without improving performance</h4>
-                        <p class="text-sm">The environment originally used both a force rubric and a formation energy rubric to check validity and stability. Both were intended to provide complementary signals about why generation was failing, thereby improving training. In practice, performance never improved when both were active. Our hypothesis is that including both rubrics increased reward variance to the point that it was harder for the model to get gradient updates in the right direction—the signals partially cancelled rather than reinforced.</p>
+                        <p class="text-sm">The environment originally used both a force rubric and a formation energy rubric to check validity and stability. Both were intended to provide complementary signals about why generation was failing, thereby improving training. In practice, performance never improved when both were active. My hypothesis is that including both rubrics increased reward variance to the point that it was harder for the model to get gradient updates in the right direction—the signals partially cancelled rather than reinforced.</p>
                     </div>
                     <div>
                         <h4 class="font-bold text-red-800 dark:text-red-300 mb-1">3. Multi-turn feedback is a re-roll signal, not a repair signal</h4>
-                        <p class="text-sm">In multi-turn rollouts, we expected the model to use feedback from a failed first attempt to diagnose and correct structural deficiencies. Across 37 first-turn failures from the 30B run, there were <strong>zero physical recoveries</strong>—no corrections to formation energy, forces, or bond lengths. Seven cases showed syntactic recoveries (fixing a malformed CIF tag), but the model treated scalar feedback like "Formation energy is too high" as a cue to re-roll rather than to diagnose. It rephrases its chain-of-thought reasoning and outputs a near-identical structure with minor random perturbations. The model can repair a broken file; it cannot repair a bad structure.</p>
+                        <p class="text-sm">In multi-turn rollouts, I expected the model to use feedback from a failed first attempt to diagnose and correct structural deficiencies. Across 37 first-turn failures from the 30B run, there were <strong>zero physical recoveries</strong>—no corrections to formation energy, forces, or bond lengths. Seven cases showed syntactic recoveries (fixing a malformed CIF tag), but the model treated scalar feedback like "Formation energy is too high" as a cue to re-roll rather than to diagnose. It rephrases its chain-of-thought reasoning and outputs a near-identical structure with minor random perturbations. The model can repair a broken file; it cannot repair a bad structure.</p>
                     </div>
                 </div>
             </div>
@@ -987,7 +994,7 @@ else:
             </header>
 
             <p class="text-lg text-gray-700 dark:text-gray-300 mb-6">
-                We ran the crystal relaxation environment on two model scales: a <strong>30B-parameter</strong> model (87 rollout samples, steps 0–100, 11 checkpoints) and a <strong>230B-parameter</strong> model (63 samples, steps 0–070, 8 checkpoints). Both runs use the same reward function, the same filtered MP-20 dataset from HuggingFace, and the same GRPO training loop. What we found is that scale doesn’t just change <em>how well</em> a model learns—it determines <em>what kind of reasoning strategy</em> RL selects for entirely.
+                I ran the crystal relaxation environment on two model scales: a <strong>30B-parameter</strong> model (87 rollout samples, steps 0–100, 11 checkpoints) and a <strong>230B-parameter</strong> model (63 samples, steps 0–070, 8 checkpoints). Both runs use the same reward function, the same filtered MP-20 dataset from HuggingFace, and the same GRPO training loop. What I found is that scale doesn’t just change <em>how well</em> a model learns—it determines <em>what kind of reasoning strategy</em> RL selects for entirely.
             </p>
 
             <h3 class="text-2xl font-bold text-indigo-700 dark:text-indigo-400 mt-10 mb-4">1. Reward Trajectories</h3>
@@ -999,8 +1006,8 @@ else:
                     <thead class="bg-indigo-50 dark:bg-indigo-900/40 text-gray-700 dark:text-gray-200 font-semibold">
                         <tr>
                             <th class="px-4 py-2 text-left">Step</th>
-                            <th class="px-4 py-2 text-center" colspan="2">230B Model</th>
                             <th class="px-4 py-2 text-center" colspan="2">30B Model</th>
+                            <th class="px-4 py-2 text-center" colspan="2">230B Model</th>
                         </tr>
                         <tr class="text-xs text-gray-500 dark:text-gray-400">
                             <th class="px-4 py-1"></th>
@@ -1011,17 +1018,17 @@ else:
                         </tr>
                     </thead>
                     <tbody class="bg-white dark:bg-gray-900 divide-y divide-gray-200 dark:divide-gray-700 text-gray-700 dark:text-gray-300">
-                        <tr><td class="px-4 py-2">0</td><td class="px-4 py-2 text-center">0.706</td><td class="px-4 py-2 text-center">0.364</td><td class="px-4 py-2 text-center">0.406</td><td class="px-4 py-2 text-center">0.202</td></tr>
-                        <tr class="bg-gray-50 dark:bg-gray-800"><td class="px-4 py-2">10</td><td class="px-4 py-2 text-center">0.705</td><td class="px-4 py-2 text-center">0.145</td><td class="px-4 py-2 text-center">0.710</td><td class="px-4 py-2 text-center">0.235</td></tr>
-                        <tr><td class="px-4 py-2">20</td><td class="px-4 py-2 text-center">0.880</td><td class="px-4 py-2 text-center">0.164</td><td class="px-4 py-2 text-center">0.703</td><td class="px-4 py-2 text-center">0.214</td></tr>
-                        <tr class="bg-gray-50 dark:bg-gray-800"><td class="px-4 py-2">30</td><td class="px-4 py-2 text-center">0.722</td><td class="px-4 py-2 text-center">0.270</td><td class="px-4 py-2 text-center">0.498</td><td class="px-4 py-2 text-center">0.272</td></tr>
-                        <tr><td class="px-4 py-2">40</td><td class="px-4 py-2 text-center">0.502</td><td class="px-4 py-2 text-center">0.308</td><td class="px-4 py-2 text-center">0.727</td><td class="px-4 py-2 text-center">0.223</td></tr>
-                        <tr class="bg-gray-50 dark:bg-gray-800"><td class="px-4 py-2">50</td><td class="px-4 py-2 text-center">0.719</td><td class="px-4 py-2 text-center">0.186</td><td class="px-4 py-2 text-center">0.696</td><td class="px-4 py-2 text-center">0.276</td></tr>
-                        <tr><td class="px-4 py-2">60</td><td class="px-4 py-2 text-center font-bold text-indigo-700 dark:text-indigo-400">0.954</td><td class="px-4 py-2 text-center font-bold text-indigo-700 dark:text-indigo-400">0.116</td><td class="px-4 py-2 text-center">0.589</td><td class="px-4 py-2 text-center">0.275</td></tr>
-                        <tr class="bg-gray-50 dark:bg-gray-800"><td class="px-4 py-2">70</td><td class="px-4 py-2 text-center">0.928</td><td class="px-4 py-2 text-center">0.144</td><td class="px-4 py-2 text-center">0.529</td><td class="px-4 py-2 text-center">0.267</td></tr>
-                        <tr><td class="px-4 py-2">80</td><td class="px-4 py-2 text-center text-gray-400">—</td><td class="px-4 py-2 text-center text-gray-400">—</td><td class="px-4 py-2 text-center font-bold text-purple-700 dark:text-purple-400">0.766</td><td class="px-4 py-2 text-center font-bold text-purple-700 dark:text-purple-400">0.277</td></tr>
-                        <tr class="bg-gray-50 dark:bg-gray-800"><td class="px-4 py-2">90</td><td class="px-4 py-2 text-center text-gray-400">—</td><td class="px-4 py-2 text-center text-gray-400">—</td><td class="px-4 py-2 text-center">0.661</td><td class="px-4 py-2 text-center">0.327</td></tr>
-                        <tr><td class="px-4 py-2">100</td><td class="px-4 py-2 text-center text-gray-400">—</td><td class="px-4 py-2 text-center text-gray-400">—</td><td class="px-4 py-2 text-center text-red-600 dark:text-red-400">0.520</td><td class="px-4 py-2 text-center text-red-600 dark:text-red-400">0.258</td></tr>
+                        <tr><td class="px-4 py-2">0</td><td class="px-4 py-2 text-center">0.406</td><td class="px-4 py-2 text-center">0.202</td><td class="px-4 py-2 text-center">0.706</td><td class="px-4 py-2 text-center">0.364</td></tr>
+                        <tr class="bg-gray-50 dark:bg-gray-800"><td class="px-4 py-2">10</td><td class="px-4 py-2 text-center">0.710</td><td class="px-4 py-2 text-center">0.235</td><td class="px-4 py-2 text-center">0.705</td><td class="px-4 py-2 text-center">0.145</td></tr>
+                        <tr><td class="px-4 py-2">20</td><td class="px-4 py-2 text-center">0.703</td><td class="px-4 py-2 text-center">0.214</td><td class="px-4 py-2 text-center">0.880</td><td class="px-4 py-2 text-center">0.164</td></tr>
+                        <tr class="bg-gray-50 dark:bg-gray-800"><td class="px-4 py-2">30</td><td class="px-4 py-2 text-center">0.498</td><td class="px-4 py-2 text-center">0.272</td><td class="px-4 py-2 text-center">0.722</td><td class="px-4 py-2 text-center">0.270</td></tr>
+                        <tr><td class="px-4 py-2">40</td><td class="px-4 py-2 text-center">0.727</td><td class="px-4 py-2 text-center">0.223</td><td class="px-4 py-2 text-center">0.502</td><td class="px-4 py-2 text-center">0.308</td></tr>
+                        <tr class="bg-gray-50 dark:bg-gray-800"><td class="px-4 py-2">50</td><td class="px-4 py-2 text-center">0.696</td><td class="px-4 py-2 text-center">0.276</td><td class="px-4 py-2 text-center">0.719</td><td class="px-4 py-2 text-center">0.186</td></tr>
+                        <tr><td class="px-4 py-2">60</td><td class="px-4 py-2 text-center">0.589</td><td class="px-4 py-2 text-center">0.275</td><td class="px-4 py-2 text-center font-bold text-indigo-700 dark:text-indigo-400">0.954</td><td class="px-4 py-2 text-center font-bold text-indigo-700 dark:text-indigo-400">0.116</td></tr>
+                        <tr class="bg-gray-50 dark:bg-gray-800"><td class="px-4 py-2">70</td><td class="px-4 py-2 text-center">0.529</td><td class="px-4 py-2 text-center">0.267</td><td class="px-4 py-2 text-center">0.928</td><td class="px-4 py-2 text-center">0.144</td></tr>
+                        <tr><td class="px-4 py-2">80</td><td class="px-4 py-2 text-center font-bold text-purple-700 dark:text-purple-400">0.766</td><td class="px-4 py-2 text-center font-bold text-purple-700 dark:text-purple-400">0.277</td><td class="px-4 py-2 text-center text-gray-400">—</td><td class="px-4 py-2 text-center text-gray-400">—</td></tr>
+                        <tr class="bg-gray-50 dark:bg-gray-800"><td class="px-4 py-2">90</td><td class="px-4 py-2 text-center">0.661</td><td class="px-4 py-2 text-center">0.327</td><td class="px-4 py-2 text-center text-gray-400">—</td><td class="px-4 py-2 text-center text-gray-400">—</td></tr>
+                        <tr><td class="px-4 py-2">100</td><td class="px-4 py-2 text-center text-red-600 dark:text-red-400">0.520</td><td class="px-4 py-2 text-center text-red-600 dark:text-red-400">0.258</td><td class="px-4 py-2 text-center text-gray-400">—</td><td class="px-4 py-2 text-center text-gray-400">—</td></tr>
                     </tbody>
                 </table>
             </div>
@@ -1039,18 +1046,18 @@ else:
                     <thead class="bg-gray-50 dark:bg-gray-800 font-semibold text-gray-700 dark:text-gray-200">
                         <tr>
                             <th class="px-4 py-2 text-left">Step</th>
-                            <th class="px-4 py-2 text-center">230B reasoning (chars)</th>
                             <th class="px-4 py-2 text-center">30B reasoning (chars)</th>
+                            <th class="px-4 py-2 text-center">230B reasoning (chars)</th>
                         </tr>
                     </thead>
                     <tbody class="bg-white dark:bg-gray-900 divide-y divide-gray-200 dark:divide-gray-700 text-gray-700 dark:text-gray-300">
-                        <tr><td class="px-4 py-2">0</td><td class="px-4 py-2 text-center">3,966</td><td class="px-4 py-2 text-center">1,532</td></tr>
-                        <tr class="bg-gray-50 dark:bg-gray-800"><td class="px-4 py-2">20</td><td class="px-4 py-2 text-center">4,440</td><td class="px-4 py-2 text-center">1,502</td></tr>
-                        <tr><td class="px-4 py-2">40</td><td class="px-4 py-2 text-center">5,969</td><td class="px-4 py-2 text-center">1,270</td></tr>
-                        <tr class="bg-gray-50 dark:bg-gray-800"><td class="px-4 py-2">60</td><td class="px-4 py-2 text-center">6,640</td><td class="px-4 py-2 text-center">924</td></tr>
-                        <tr><td class="px-4 py-2">70</td><td class="px-4 py-2 text-center font-bold text-indigo-700 dark:text-indigo-300">7,320 (+85%)</td><td class="px-4 py-2 text-center">810</td></tr>
-                        <tr class="bg-gray-50 dark:bg-gray-800"><td class="px-4 py-2">80</td><td class="px-4 py-2 text-center text-gray-400">—</td><td class="px-4 py-2 text-center">654</td></tr>
-                        <tr><td class="px-4 py-2">100</td><td class="px-4 py-2 text-center text-gray-400">—</td><td class="px-4 py-2 text-center font-bold text-purple-700 dark:text-purple-300">574 (−63%)</td></tr>
+                        <tr><td class="px-4 py-2">0</td><td class="px-4 py-2 text-center">1,532</td><td class="px-4 py-2 text-center">3,966</td></tr>
+                        <tr class="bg-gray-50 dark:bg-gray-800"><td class="px-4 py-2">20</td><td class="px-4 py-2 text-center">1,502</td><td class="px-4 py-2 text-center">4,440</td></tr>
+                        <tr><td class="px-4 py-2">40</td><td class="px-4 py-2 text-center">1,270</td><td class="px-4 py-2 text-center">5,969</td></tr>
+                        <tr class="bg-gray-50 dark:bg-gray-800"><td class="px-4 py-2">60</td><td class="px-4 py-2 text-center">924</td><td class="px-4 py-2 text-center">6,640</td></tr>
+                        <tr><td class="px-4 py-2">70</td><td class="px-4 py-2 text-center">810</td><td class="px-4 py-2 text-center font-bold text-indigo-700 dark:text-indigo-300">7,320 (+85%)</td></tr>
+                        <tr class="bg-gray-50 dark:bg-gray-800"><td class="px-4 py-2">80</td><td class="px-4 py-2 text-center">654</td><td class="px-4 py-2 text-center text-gray-400">—</td></tr>
+                        <tr><td class="px-4 py-2">100</td><td class="px-4 py-2 text-center font-bold text-purple-700 dark:text-purple-300">574 (−63%)</td><td class="px-4 py-2 text-center text-gray-400">—</td></tr>
                     </tbody>
                 </table>
             </div>
@@ -1097,18 +1104,18 @@ else:
                     </thead>
                     <tbody class="bg-white dark:bg-gray-900 divide-y divide-gray-200 dark:divide-gray-700 text-gray-700 dark:text-gray-300">
                         <tr>
-                            <td class="px-4 py-2 font-medium">230B</td>
-                            <td class="px-4 py-2 text-center">0.053 Å</td>
-                            <td class="px-4 py-2 text-center">0.017 Å (step 60)</td>
-                            <td class="px-4 py-2 text-center">−68%</td>
-                            <td class="px-4 py-2 text-center font-bold text-indigo-700 dark:text-indigo-300">0.957 (step 60)</td>
-                        </tr>
-                        <tr class="bg-gray-50 dark:bg-gray-800">
                             <td class="px-4 py-2 font-medium">30B</td>
                             <td class="px-4 py-2 text-center">0.025 Å</td>
                             <td class="px-4 py-2 text-center">0.002 Å (step 90)</td>
                             <td class="px-4 py-2 text-center">−91%</td>
                             <td class="px-4 py-2 text-center text-orange-600 dark:text-orange-400">0.658 (step 80)</td>
+                        </tr>
+                        <tr class="bg-gray-50 dark:bg-gray-800">
+                            <td class="px-4 py-2 font-medium">230B</td>
+                            <td class="px-4 py-2 text-center">0.053 Å</td>
+                            <td class="px-4 py-2 text-center">0.017 Å (step 60)</td>
+                            <td class="px-4 py-2 text-center">−68%</td>
+                            <td class="px-4 py-2 text-center font-bold text-indigo-700 dark:text-indigo-300">0.957 (step 60)</td>
                         </tr>
                     </tbody>
                 </table>
@@ -1125,7 +1132,7 @@ else:
             <h3 class="text-2xl font-bold text-red-700 dark:text-red-400 mt-10 mb-4">6. Effectiveness of Multi-Step Feedback</h3>
 
             <p class="mb-6">
-                In multi-turn rollouts, when the first attempt fails the energy or the bond-length heuristic threshold, the model receives feedback and gets a second turn. We expected the model to use this feedback to diagnose and correct structural deficiencies. In practice, weak models show little evidence of their usefulness. Analysis of 37 first-turn failures from the 30B run:
+                In multi-turn rollouts, when the first attempt fails the energy or the bond-length heuristic threshold, the model receives feedback and gets a second turn. I expected the model to use this feedback to diagnose and correct structural deficiencies. In practice, weak models show little evidence of their usefulness. Analysis of 37 first-turn failures from the 30B run:
             </p>
             <ul class="list-disc list-inside mb-6 space-y-2 text-gray-700 dark:text-gray-300">
                 <li><strong>Physical recoveries (energy, forces, bonds):</strong> 0. Zero cases where the model corrected formation energy, forces, or bond lengths.</li>
@@ -1161,7 +1168,7 @@ else:
                 </div>
                 <div class="bg-gray-50 dark:bg-gray-800 rounded-lg p-5 border-l-4 border-red-500">
                     <h4 class="font-bold text-gray-900 dark:text-white mb-1">Exploration of Reward Hacking Mechanisms</h4>
-                    <p class="text-sm text-gray-700 dark:text-gray-300">The composition-hacking failure mode we observed is one instance of a broader class. Systematic probing—varying rubric weights, model sizes, and training steps—could map the reward landscape that RL policies exploit, informing more robust multi-objective reward design for scientific tasks.</p>
+                    <p class="text-sm text-gray-700 dark:text-gray-300">The composition-hacking failure mode I observed is one instance of a broader class. Systematic probing—varying rubric weights, model sizes, and training steps—could map the reward landscape that RL policies exploit, informing more robust multi-objective reward design for scientific tasks.</p>
                 </div>
                 <div class="bg-gray-50 dark:bg-gray-800 rounded-lg p-5 border-l-4 border-green-500">
                     <h4 class="font-bold text-gray-900 dark:text-white mb-1">Dynamic Rewards</h4>
@@ -1206,6 +1213,9 @@ else:
                         <em>Magnetic control of tokamak plasmas through deep reinforcement learning.</em> 
                         Nature, 602(7897), 414-419.
                     </li>
+                    <li id="ref-cif">
+                        <strong>[7] CIF format:</strong> A Crystallographic Information File (CIF) is a standard text format for crystal structures. It typically stores unit-cell lengths and angles, symmetry or space-group metadata, atomic species, fractional coordinates, occupancies, and related crystallographic annotations needed to reconstruct the structure.
+                    </li>
                 </ol>
             </div>
 
@@ -1229,26 +1239,6 @@ else:
         </footer>
 
     </main>
-
-    <script>
-        function switchTab(event, tabName) {
-            // Hide all tab content
-            const tabContents = document.getElementsByClassName('tab-content');
-            for (let content of tabContents) {
-                content.classList.remove('active');
-            }
-            
-            // Remove active class from all buttons
-            const tabButtons = document.getElementsByClassName('tab-button');
-            for (let button of tabButtons) {
-                button.classList.remove('active');
-            }
-            
-            // Show selected tab and mark button as active
-            document.getElementById(tabName).classList.add('active');
-            event.currentTarget.classList.add('active');
-        }
-    </script>
 
     <script>
         const toggleSwitch = document.querySelector('#theme-toggle');
@@ -1275,12 +1265,17 @@ else:
         
         // Tab switching logic
         function switchTab(event, tabId) {
-            // Hide all tab content
-            const contents = document.querySelectorAll('.tab-content');
+            const scope = event.currentTarget.closest('[data-tab-scope]');
+            if (!scope) {
+                return;
+            }
+
+            // Hide tab content within the current tab group only.
+            const contents = scope.querySelectorAll('.tab-content');
             contents.forEach(content => content.classList.remove('active'));
             
-            // Deactivate all buttons
-            const buttons = document.querySelectorAll('.tab-button');
+            // Deactivate buttons within the current tab group only.
+            const buttons = scope.querySelectorAll('.tab-button');
             buttons.forEach(button => button.classList.remove('active'));
             
             // Show selected tab content
