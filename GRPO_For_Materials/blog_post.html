@@ -925,67 +925,11 @@ reward = 0.15 if composition_matches else 0.0</code></pre>
                    class="inline-block bg-blue-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-blue-700 transition shadow-lg">View on Prime Intellect &rarr;</a>
             </div>
 
-            <h2 class="text-2xl font-bold mt-10 mb-4">What's Next?</h2>
-            <p class="mb-4">
-                Several open problems are worth pursuing from here:
-            </p>
-            <ol class="list-decimal list-inside mb-6 ml-4 text-gray-700 dark:text-gray-300 space-y-3">
-                <li>
-                    <strong>Vector feedback for iterative learning.</strong> Current feedback is scalar ("energy too high"). 
-                    The training analysis shows the agent can't fix failed structures, only re-roll. 
-                    Providing per-atom force vectors as textual feedback—e.g., "atom 3 (O) has residual force 1.2 eV/Å along c"—could 
-                    give the policy the gradient signal it needs for true iterative refinement.
-                </li>
-                <li>
-                    <strong>Curriculum over E<sub>f</sub> threshold.</strong> Start with a wide threshold (0.5 eV/atom) and anneal 
-                    it toward 0.05 eV/atom as training progresses—analogous to curriculum learning in RL for locomotion tasks. 
-                    This avoids the sparse reward problem at initialization.
-                </li>
-                <li>
-                    <strong>Generalization to novel compositions.</strong> The current agent is trained on mp-20 structures. 
-                    Testing on out-of-distribution materials (e.g., high-entropy alloys, ternary nitrides outside the training set) 
-                    would probe whether the policy has learned generalizable structural heuristics or is pattern-matching mp-20 CIFs.
-                </li>
-                <li>
-                    <strong>Symmetry-aware action space.</strong> All atomic coordinates are currently treated independently. 
-                    Imposing Wyckoff position constraints during generation—enforcing the correct space group symmetry in the CIF—would 
-                    dramatically reduce the effective action space and should improve sample efficiency.
-                </li>
-                <li>
-                    <strong>Hybrid LLM + optimizer pipeline.</strong> Use the LLM as a coarse-grained proposer and run a 
-                    CHGNet-driven BFGS pass on the output for fine-grained relaxation. 
-                    This combines the generative flexibility of an LLM policy with the convergence guarantees of gradient-based optimization.
-                </li>
-            </ol>
-
-
-            <h2 class="text-2xl font-bold mt-10 mb-4">⚠️ What Didn't Work</h2>
-            <div class="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-6 mb-6">
-                <p class="text-gray-700 dark:text-gray-300 italic mb-5">
-                    These are the failure modes discovered during development—documented so others don’t repeat them.
-                </p>
-                
-                <div class="space-y-6 text-gray-700 dark:text-gray-300">
-                    <div>
-                        <h4 class="font-bold text-red-800 dark:text-red-300 mb-1">1. Equal weighting of composition and stability rewards leads to reward hacking</h4>
-                        <p class="text-sm">In an early version of the reward function, composition and formation energy rubrics were given equal weight (~0.40 each). The agent, at different stages of training, would discover that it could achieve consistently higher rewards by memorizing a single structurally simple crystal—a binary oxide with symmetric Wyckoff positions or a bi-metallic crystal—that reliably scores well on stability metrics. This promoted laziness: instead of trying to comply with composition constraints, the model would just output an easy structure. Once this pattern was discovered, the model quickly degenerated from shorter to almost non-existent reasoning trajectories. The fix was to decrease the importance of the composition rubric while keeping it non-zero: low enough that the policy is not rewarded enough to make quick, undesired reward gains, but high enough to provide gradient signal early in training when the model is too weak to pass the stability rubric.</p>
-                    </div>
-                    <div>
-                        <h4 class="font-bold text-red-800 dark:text-red-300 mb-1">2. Redundant rubrics increase variance without improving performance</h4>
-                        <p class="text-sm">The environment originally used both a force rubric and a formation energy rubric to check validity and stability. Both were intended to provide complementary signals about why generation was failing, thereby improving training. In practice, performance never improved when both were active. My hypothesis is that including both rubrics increased reward variance to the point that it was harder for the model to get gradient updates in the right direction—the signals partially cancelled rather than reinforced.</p>
-                    </div>
-                    <div>
-                        <h4 class="font-bold text-red-800 dark:text-red-300 mb-1">3. Multi-turn feedback is a re-roll signal, not a repair signal</h4>
-                        <p class="text-sm">In multi-turn rollouts, I expected the model to use feedback from a failed first attempt to diagnose and correct structural deficiencies. Across 37 first-turn failures from the 30B run, there were <strong>zero physical recoveries</strong>—no corrections to formation energy, forces, or bond lengths. Seven cases showed syntactic recoveries (fixing a malformed CIF tag), but the model treated scalar feedback like "Formation energy is too high" as a cue to re-roll rather than to diagnose. It rephrases its chain-of-thought reasoning and outputs a near-identical structure with minor random perturbations. The model can repair a broken file; it cannot repair a bad structure.</p>
-                    </div>
-                </div>
-            </div>
         </section>
                 <section class="prose prose-indigo lg:prose-xl dark:prose-invert mt-16">
             <header class="mb-10 border-b border-gray-200 dark:border-gray-700 pb-6">
                 <h2 class="text-3xl font-bold text-gray-900 dark:text-white mb-2">Training Runs: How an LLM “Learns” Physics</h2>
                 <div class="flex items-center text-sm text-gray-500 dark:text-gray-400 italic">
-                    <span>Posted on February 17, 2026</span>
                     <span class="mx-2">•</span>
                     <span>Tagged:</span>
                     <span class="bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 px-2 py-0.5 rounded text-xs ml-2">RL</span>
@@ -1067,20 +1011,20 @@ reward = 0.15 if composition_matches else 0.0</code></pre>
             <div class="bg-indigo-50 dark:bg-indigo-900/20 border-l-4 border-indigo-500 dark:border-indigo-400 p-6 my-8 rounded-r-lg">
                 <h4 class="text-indigo-800 dark:text-indigo-200 font-bold mb-3">System 1 vs. System 2 Reasoning</h4>
                 <p class="text-indigo-900 dark:text-indigo-100 mb-3">
-                    This maps cleanly onto Kahneman’s dual-process framework. The <strong>230B model develops System 2 reasoning</strong>: deliberative, step-by-step crystallographic analysis that deepens over training. By step 30, it correctly identifies hexagonal cells from γ = 120°; by step 60–70, it references Wyckoff positions, prototype structures, and Pnma space groups it was never explicitly trained on—and explicitly acknowledges it cannot run real DFT while still producing near-perfect structures.
+                    This maps cleanly onto Kahneman’s dual-process framework. The <strong>230B model develops reasoning that is</strong>: deliberative, step-by-step crystallographic analysis that deepens over training. By step 30, it correctly identifies hexagonal cells from γ = 120°; by step 60–70, it references Wyckoff positions, prototype structures, and Pnma space groups it was never explicitly trained on—and explicitly acknowledges it cannot run real DFT while still producing stable structures.
                 </p>
                 <p class="text-indigo-900 dark:text-indigo-100">
-                    The <strong>30B model converges on System 1</strong>: compressed, procedural preambles (“relaxation will be performed using DFT—output below”) that discard domain vocabulary in favor of getting directly to the CIF. RL selects for this compression because the smaller model lacks the capacity to maintain both elaborate reasoning <em>and</em> correct structural output simultaneously. By step 90–100, the reasoning reads as a <em>formality</em> rather than a problem-solving step—the model even inserts the parenthetical “(simulated here for brevity)”.
+                    The <strong>30B model reasoning on the other hand is:</strong> compressed, procedural preambles (“relaxation will be performed using DFT—output below”) that discard domain vocabulary in favor of getting directly to the CIF. RL selects for this compression because the smaller model lacks the capacity to maintain both elaborate reasoning <em>and</em> correct structural output simultaneously. By step 90–100, the reasoning reads as a <em>formality</em> rather than a problem-solving step—the model even inserts the parenthetical “(simulated here for brevity)”.
                 </p>
             </div>
 
-            <p class="mb-6">The keyword data confirms this divergence. In the 230B model, “symmetry” mentions grow from 6.4 per sample at step 0 to <strong>11.3 at step 60</strong>, and Wyckoff positions emerge at step 40+. In the 30B model, “symmetry” starts at 0.6 and reaches <strong>0.0 by step 100</strong>. “Bond” drops from 2.0 to 0.0 by step 60. “Coordination” and “Wyckoff” never appear at any step.</p>
+            <p class="mb-6">Analyzing keyword data gives some evidence to this divergence. In the 230B model, “symmetry” mentions grow from 6.4 per sample at step 0 to <strong>11.3 at step 60</strong>, and Wyckoff positions emerge at step 40+. In the 30B model, “symmetry” starts at 0.6 and reaches <strong>0.0 by step 100</strong>. “Bond” drops from 2.0 to 0.0 by step 60. “Coordination” and “Wyckoff” never appear at any step.</p>
 
             <h3 class="text-2xl font-bold text-indigo-700 dark:text-indigo-400 mt-10 mb-4">3. Internalizing Bond Heuristics</h3>
 
             <div class="bg-purple-50 dark:bg-purple-900/20 border-l-4 border-purple-500 dark:border-purple-400 p-6 my-6 rounded-r-lg">
                 <p class="text-purple-900 dark:text-purple-100 mb-3">
-                    The 30B model’s “bond” keyword count drops from <strong>2.0 per sample at step 0 to 0.0 by step 60</strong>—and stays at zero through step 100. On the surface, this looks like the model forgetting about bond lengths.
+                    The 30B model’s “bond” keyword count drops from <strong>2.0 per sample at step 0 to 0.0 by step 60</strong>—and stays at zero through step 100. On the surface, this looks like the model not analyzing the structure entirely.
                 </p>
                 <p class="text-purple-900 dark:text-purple-100">
                     In reality, the <strong>bond length reward improves from 0.574 to 0.809</strong> over the same period (peaking at 0.818 at step 90). The model’s bond quality gets better while it stops talking about bonds. This is the compression heuristic in action: the concept has been internalized into the structural output itself, removed from the scratchpad. The 30B model learns to <em>do</em> without needing to <em>say</em>. The 230B model does the opposite: bond mentions also decline after step 50, but from a higher baseline and after the model has already peak-loaded its symmetry vocabulary.
@@ -1183,46 +1127,8 @@ reward = 0.15 if composition_matches else 0.0</code></pre>
                     <p class="text-sm text-gray-700 dark:text-gray-300">With more compute, a stronger next step is to run actual DFT relaxations on structures generated by a fine-tuned model and use those outcomes as the reward signal. That would open the door to PPO- or RLHF-like fine-tuning over traces scored by much higher-quality physics, rather than relying only on surrogate rewards from CHGNet and heuristic rubrics.</p>
                 </div>
             </div>
-            <h2 class="text-2xl font-bold mt-10 mb-4">References</h2>
-            <div class="bg-gray-50 border border-gray-200 rounded-lg p-6 mb-6">
-                <ol class="space-y-4 text-sm text-gray-700">
-                    <li>
-                        <strong>[1] CHGNet:</strong> Deng, B., Zhong, P., Jun, K., Riebesell, J., Han, K., Bartel, C. J., & Ceder, G. (2023). 
-                        <em>CHGNet as a pretrained universal neural network potential for charge-informed atomistic modelling.</em> 
-                        Nature Machine Intelligence, 5(9), 1031-1041. 
-                        <a href="https://doi.org/10.1038/s42256-023-00716-3" class="text-indigo-600 hover:text-indigo-800">doi:10.1038/s42256-023-00716-3</a>
-                    </li>
-                    <li>
-                        <strong>[2] Materials Project:</strong> Jain, A., Ong, S. P., Hautier, G., Chen, W., Richards, W. D., Dacek, S., ... & Persson, K. A. (2013). 
-                        <em>Commentary: The Materials Project: A materials genome approach to accelerating materials innovation.</em> 
-                        APL Materials, 1(1), 011002. 
-                        <a href="https://doi.org/10.1063/1.4812323" class="text-indigo-600 hover:text-indigo-800">doi:10.1063/1.4812323</a>
-                    </li>
-                    <li>
-                        <strong>[3] MP-20 Dataset:</strong> Chen, C., Zuo, Y., Ye, W., Li, X., & Ong, S. P. (2021). 
-                        <em>Learning properties of ordered and disordered materials from multi-fidelity data.</em> 
-                        Nature Computational Science, 1(1), 46-53. 
-                        <a href="https://doi.org/10.1038/s43588-020-00002-x" class="text-indigo-600 hover:text-indigo-800">doi:10.1038/s43588-020-00002-x</a>
-                    </li>
-                    <li>
-                        <strong>[4] Formation Energy Threshold:</strong> The 0.1 eV/atom threshold for thermodynamic stability is based on commonly accepted criteria in computational materials science. 
-                        See: Sun, W., Bartel, C. J., Arca, E., Bauers, S. R., Matthews, B., Orvañanos, B., ... & Toney, M. F. (2019). 
-                        <em>A map of the inorganic ternary metal nitrides.</em> 
-                        Nature Materials, 18(7), 732-739.
-                    </li>
-                    <li>
-                        <strong>[5] Graph Neural Networks for Materials:</strong> Xie, T., & Grossman, J. C. (2018). 
-                        <em>Crystal graph convolutional neural networks for an accurate and interpretable prediction of material properties.</em> 
-                        Physical Review Letters, 120(14), 145301.
-                    </li>
-                    <li>
-                        <strong>[6] Reinforcement Learning for Science:</strong> The application of RL to scientific domains draws inspiration from: 
-                        Degrave, J., et al. (2022). 
-                        <em>Magnetic control of tokamak plasmas through deep reinforcement learning.</em> 
-                        Nature, 602(7897), 414-419.
-                    </li>
                     <li id="ref-cif">
-                        <strong>[7] CIF format:</strong> A Crystallographic Information File (CIF) is a standard text format for crystal structures. It typically stores unit-cell lengths and angles, symmetry or space-group metadata, atomic species, fractional coordinates, occupancies, and related crystallographic annotations needed to reconstruct the structure.
+                        <strong> CIF format:</strong> A Crystallographic Information File (CIF) is a standard text format for crystal structures. It typically stores unit-cell lengths and angles, symmetry or space-group metadata, atomic species, fractional coordinates, occupancies, and related crystallographic annotations needed to reconstruct the structure.
                     </li>
                 </ol>
             </div>
@@ -1234,6 +1140,62 @@ reward = 0.15 if composition_matches else 0.0</code></pre>
                     the RL environment. The formation energy threshold and bond length tolerances follow standard practices 
                     in computational materials discovery.
                 </p>
+            </div>
+
+            <h2 class="text-2xl font-bold mt-10 mb-4">What's Next?</h2>
+            <p class="mb-4">
+                Several open problems are worth pursuing from here:
+            </p>
+            <ol class="list-decimal list-inside mb-6 ml-4 text-gray-700 dark:text-gray-300 space-y-3">
+                <li>
+                    <strong>Vector feedback for iterative learning.</strong> Current feedback is scalar ("energy too high"). 
+                    The training analysis shows the agent can't fix failed structures, only re-roll. 
+                    Providing per-atom force vectors as textual feedback—e.g., "atom 3 (O) has residual force 1.2 eV/Å along c"—could 
+                    give the policy the gradient signal it needs for true iterative refinement.
+                </li>
+                <li>
+                    <strong>Curriculum over E<sub>f</sub> threshold.</strong> Start with a wide threshold (0.5 eV/atom) and anneal 
+                    it toward 0.05 eV/atom as training progresses—analogous to curriculum learning in RL for locomotion tasks. 
+                    This avoids the sparse reward problem at initialization.
+                </li>
+                <li>
+                    <strong>Generalization to novel compositions.</strong> The current agent is trained on mp-20 structures. 
+                    Testing on out-of-distribution materials (e.g., high-entropy alloys, ternary nitrides outside the training set) 
+                    would probe whether the policy has learned generalizable structural heuristics or is pattern-matching mp-20 CIFs.
+                </li>
+                <li>
+                    <strong>Symmetry-aware action space.</strong> All atomic coordinates are currently treated independently. 
+                    Imposing Wyckoff position constraints during generation—enforcing the correct space group symmetry in the CIF—would 
+                    dramatically reduce the effective action space and should improve sample efficiency.
+                </li>
+                <li>
+                    <strong>Hybrid LLM + optimizer pipeline.</strong> Use the LLM as a coarse-grained proposer and run a 
+                    CHGNet-driven BFGS pass on the output for fine-grained relaxation. 
+                    This combines the generative flexibility of an LLM policy with the convergence guarantees of gradient-based optimization.
+                </li>
+            </ol>
+
+
+            <h2 class="text-2xl font-bold mt-10 mb-4">⚠️ What Didn't Work</h2>
+            <div class="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-6 mb-6">
+                <p class="text-gray-700 dark:text-gray-300 italic mb-5">
+                    These are the failure modes discovered during development—documented so others don’t repeat them.
+                </p>
+                
+                <div class="space-y-6 text-gray-700 dark:text-gray-300">
+                    <div>
+                        <h4 class="font-bold text-red-800 dark:text-red-300 mb-1">1. Equal weighting of composition and stability rewards leads to reward hacking</h4>
+                        <p class="text-sm">In an early version of the reward function, composition and formation energy rubrics were given equal weight (~0.40 each). The agent, at different stages of training, would discover that it could achieve consistently higher rewards by memorizing a single structurally simple crystal—a binary oxide with symmetric Wyckoff positions or a bi-metallic crystal—that reliably scores well on stability metrics. This promoted laziness: instead of trying to comply with composition constraints, the model would just output an easy structure. Once this pattern was discovered, the model quickly degenerated from shorter to almost non-existent reasoning trajectories. The fix was to decrease the importance of the composition rubric while keeping it non-zero: low enough that the policy is not rewarded enough to make quick, undesired reward gains, but high enough to provide gradient signal early in training when the model is too weak to pass the stability rubric.</p>
+                    </div>
+                    <div>
+                        <h4 class="font-bold text-red-800 dark:text-red-300 mb-1">2. Redundant rubrics increase variance without improving performance</h4>
+                        <p class="text-sm">The environment originally used both a force rubric and a formation energy rubric to check validity and stability. Both were intended to provide complementary signals about why generation was failing, thereby improving training. In practice, performance never improved when both were active. My hypothesis is that including both rubrics increased reward variance to the point that it was harder for the model to get gradient updates in the right direction—the signals partially cancelled rather than reinforced.</p>
+                    </div>
+                    <div>
+                        <h4 class="font-bold text-red-800 dark:text-red-300 mb-1">3. Multi-turn feedback is a re-roll signal, not a repair signal</h4>
+                        <p class="text-sm">In multi-turn rollouts, I expected the model to use feedback from a failed first attempt to diagnose and correct structural deficiencies. Across 37 first-turn failures from the 30B run, there were <strong>zero physical recoveries</strong>—no corrections to formation energy, forces, or bond lengths. Seven cases showed syntactic recoveries (fixing a malformed CIF tag), but the model treated scalar feedback like "Formation energy is too high" as a cue to re-roll rather than to diagnose. It rephrases its chain-of-thought reasoning and outputs a near-identical structure with minor random perturbations. The model can repair a broken file; it cannot repair a bad structure.</p>
+                    </div>
+                </div>
             </div>
 
         </section>
