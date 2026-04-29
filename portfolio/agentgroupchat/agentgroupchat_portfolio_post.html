@@ -1,0 +1,642 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AgentGroupChat | Portfolio Post</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --bg: #f4efe8;
+      --paper: rgba(255, 251, 245, 0.88);
+      --panel: #fffaf4;
+      --ink: #1f1d1a;
+      --muted: #665f58;
+      --accent: #bf5a36;
+      --accent-deep: #8c3d24;
+      --accent-soft: #f3d8c6;
+      --teal: #2e6f6a;
+      --gold: #d6a857;
+      --border: rgba(96, 79, 66, 0.16);
+      --shadow: 0 24px 80px rgba(31, 29, 26, 0.12);
+      --radius-xl: 28px;
+      --radius-lg: 20px;
+      --radius-md: 14px;
+      --max-width: 1180px;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html {
+      scroll-behavior: smooth;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      color: var(--ink);
+      font-family: "Avenir Next", Avenir, "Segoe UI", sans-serif;
+      background:
+        radial-gradient(circle at top left, rgba(214, 168, 87, 0.2), transparent 28%),
+        radial-gradient(circle at 85% 15%, rgba(46, 111, 106, 0.18), transparent 24%),
+        linear-gradient(180deg, #f8f2ea 0%, #efe5da 54%, #f5efe7 100%);
+    }
+
+    a {
+      color: inherit;
+    }
+
+    .page-shell {
+      width: min(var(--max-width), calc(100% - 32px));
+      margin: 0 auto;
+      padding: 28px 0 56px;
+    }
+
+    .hero {
+      position: relative;
+      overflow: hidden;
+      padding: 28px;
+      border: 1px solid var(--border);
+      border-radius: 32px;
+      background:
+        linear-gradient(135deg, rgba(255, 250, 244, 0.98), rgba(251, 242, 234, 0.92)),
+        var(--paper);
+      box-shadow: var(--shadow);
+    }
+
+    .hero::before,
+    .hero::after {
+      content: "";
+      position: absolute;
+      border-radius: 999px;
+      filter: blur(8px);
+      opacity: 0.5;
+      pointer-events: none;
+    }
+
+    .hero::before {
+      width: 280px;
+      height: 280px;
+      top: -90px;
+      right: -70px;
+      background: rgba(191, 90, 54, 0.14);
+    }
+
+    .hero::after {
+      width: 220px;
+      height: 220px;
+      left: -60px;
+      bottom: -70px;
+      background: rgba(46, 111, 106, 0.16);
+    }
+
+    .hero-grid {
+      position: relative;
+      display: grid;
+      grid-template-columns: minmax(0, 1.05fr) minmax(320px, 0.95fr);
+      gap: 28px;
+      align-items: stretch;
+      z-index: 1;
+    }
+
+    .hero-topbar {
+      position: relative;
+      z-index: 1;
+      display: flex;
+      justify-content: flex-end;
+      margin-bottom: 18px;
+    }
+
+    .hero-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 16px;
+      border: 1px solid rgba(96, 79, 66, 0.18);
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.72);
+      color: var(--ink);
+      font-size: 0.92rem;
+      font-weight: 600;
+      text-decoration: none;
+      box-shadow: 0 14px 32px rgba(31, 29, 26, 0.08);
+      transition: transform 180ms ease, box-shadow 180ms ease, background 180ms ease;
+    }
+
+    .hero-link:hover {
+      transform: translateY(-1px);
+      background: rgba(255, 255, 255, 0.9);
+      box-shadow: 0 18px 36px rgba(31, 29, 26, 0.12);
+    }
+
+    .hero-link svg {
+      flex: 0 0 auto;
+    }
+
+    h1, h2, h3 {
+      margin: 0;
+      font-family: "Iowan Old Style", "Palatino Linotype", "Book Antiqua", Palatino, Georgia, serif;
+      line-height: 0.97;
+      letter-spacing: -0.03em;
+    }
+
+    h1 {
+      margin-top: 18px;
+      font-size: clamp(2.8rem, 6vw, 5.4rem);
+      max-width: 10ch;
+    }
+
+    .lede {
+      max-width: 63ch;
+      margin: 18px 0 0;
+      color: var(--muted);
+      font-size: 1.08rem;
+      line-height: 1.8;
+    }
+
+    .tldr-box {
+      margin-top: 22px;
+      padding: 16px 18px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      background: linear-gradient(180deg, rgba(255, 255, 255, 0.72), rgba(248, 239, 232, 0.82));
+    }
+
+    .tldr-box strong {
+      display: block;
+      margin-bottom: 8px;
+      color: var(--accent-deep);
+      font-size: 0.86rem;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    .tldr-box p {
+      color: var(--ink);
+      font-size: 0.98rem;
+      line-height: 1.75;
+    }
+
+    .hero-notes {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 12px;
+      margin-top: 24px;
+    }
+
+    .hero-note {
+      padding: 14px 16px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      background: rgba(255, 255, 255, 0.54);
+      backdrop-filter: blur(8px);
+    }
+
+    .hero-note strong {
+      display: block;
+      margin-bottom: 6px;
+      font-size: 0.84rem;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: var(--accent-deep);
+    }
+
+    .hero-note span {
+      color: var(--muted);
+      font-size: 0.95rem;
+      line-height: 1.6;
+    }
+
+    .video-card {
+      display: grid;
+      grid-template-rows: auto 1fr auto;
+      min-height: 100%;
+      padding: 18px;
+      border: 1px solid rgba(31, 29, 26, 0.08);
+      border-radius: var(--radius-xl);
+      background: linear-gradient(180deg, rgba(34, 30, 28, 0.98), rgba(58, 44, 36, 0.95));
+      color: #f6ede3;
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
+    }
+
+    .video-label {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      color: rgba(246, 237, 227, 0.72);
+      font-size: 0.82rem;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    .video-label::before {
+      content: "";
+      width: 12px;
+      height: 12px;
+      border-radius: 3px;
+      background: linear-gradient(135deg, var(--gold), var(--accent));
+    }
+
+    video {
+      width: 100%;
+      margin-top: 14px;
+      border-radius: 18px;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      background: #120f0d;
+      box-shadow: 0 20px 50px rgba(0, 0, 0, 0.22);
+    }
+
+    .video-caption {
+      margin-top: 14px;
+      color: rgba(246, 237, 227, 0.78);
+      font-size: 0.95rem;
+      line-height: 1.7;
+    }
+
+    .content-grid {
+      display: grid;
+      grid-template-columns: minmax(0, 1.08fr) minmax(320px, 0.92fr);
+      gap: 24px;
+      margin-top: 24px;
+    }
+
+    .panel {
+      padding: 28px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-xl);
+      background: var(--paper);
+      box-shadow: var(--shadow);
+    }
+
+    .section-kicker {
+      margin-bottom: 12px;
+      color: var(--accent-deep);
+      font-size: 0.85rem;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    h2 {
+      font-size: clamp(1.9rem, 3vw, 3rem);
+      margin-bottom: 14px;
+    }
+
+    p {
+      margin: 0;
+      color: var(--muted);
+      line-height: 1.82;
+      font-size: 1rem;
+    }
+
+    .stack {
+      display: grid;
+      gap: 18px;
+    }
+
+    .capability-grid,
+    .direction-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 16px;
+      margin-top: 22px;
+    }
+
+    .feature-card,
+    .direction-card {
+      padding: 18px;
+      border-radius: var(--radius-lg);
+      border: 1px solid var(--border);
+      background: linear-gradient(180deg, rgba(255, 255, 255, 0.74), rgba(252, 246, 240, 0.86));
+    }
+
+    .feature-card h3,
+    .direction-card h3 {
+      font-size: 1.3rem;
+      margin-bottom: 10px;
+    }
+
+    .feature-card p,
+    .direction-card p {
+      font-size: 0.97rem;
+    }
+
+    .mini-list {
+      margin: 0;
+      padding: 0;
+      list-style: none;
+      display: grid;
+      gap: 12px;
+    }
+
+    .mini-list li {
+      position: relative;
+      padding-left: 18px;
+      color: var(--muted);
+      line-height: 1.7;
+    }
+
+    .mini-list li::before {
+      content: "";
+      position: absolute;
+      top: 0.78em;
+      left: 0;
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, var(--teal), var(--accent));
+    }
+
+    .architecture {
+      display: grid;
+      gap: 12px;
+      margin-top: 22px;
+    }
+
+    .architecture-step {
+      display: grid;
+      grid-template-columns: auto 1fr;
+      gap: 14px;
+      align-items: start;
+      padding: 16px 18px;
+      border-radius: var(--radius-md);
+      background: rgba(255, 255, 255, 0.68);
+      border: 1px solid var(--border);
+    }
+
+    .step-index {
+      display: grid;
+      place-items: center;
+      width: 34px;
+      height: 34px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, var(--accent), var(--accent-deep));
+      color: #fff;
+      font-size: 0.9rem;
+      font-weight: 700;
+    }
+
+    .step-copy strong {
+      display: block;
+      margin-bottom: 5px;
+      color: var(--ink);
+      font-size: 1rem;
+    }
+
+    .step-copy span {
+      color: var(--muted);
+      line-height: 1.65;
+      font-size: 0.96rem;
+    }
+
+    .footer-note {
+      margin-top: 24px;
+      padding: 18px 20px;
+      border-radius: 18px;
+      border: 1px dashed rgba(96, 79, 66, 0.24);
+      background: rgba(255, 250, 244, 0.74);
+      color: var(--muted);
+      line-height: 1.7;
+      font-size: 0.95rem;
+    }
+
+    @media (max-width: 960px) {
+      .hero-grid,
+      .content-grid,
+      .capability-grid,
+      .direction-grid,
+      .hero-notes {
+        grid-template-columns: 1fr;
+      }
+
+      h1 {
+        max-width: none;
+      }
+    }
+
+    @media (max-width: 640px) {
+      .page-shell {
+        width: min(calc(100% - 20px), var(--max-width));
+        padding-top: 14px;
+        padding-bottom: 28px;
+      }
+
+      .hero,
+      .panel {
+        padding: 20px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="page-shell">
+    <section class="hero">
+      <div class="hero-topbar">
+        <a class="hero-link" href="https://github.com/Jgmedina95/AgentGroupChat" target="_blank" rel="noopener noreferrer" aria-label="Open AgentGroupChat on GitHub">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+            <path d="M12 1.5C6.2 1.5 1.5 6.34 1.5 12.31c0 4.78 3.05 8.83 7.28 10.26.53.1.72-.24.72-.53 0-.26-.01-.95-.02-1.87-2.96.66-3.58-1.46-3.58-1.46-.48-1.26-1.18-1.59-1.18-1.59-.97-.68.07-.67.07-.67 1.07.08 1.64 1.14 1.64 1.14.95 1.67 2.5 1.19 3.11.91.1-.71.37-1.19.67-1.46-2.36-.28-4.84-1.22-4.84-5.42 0-1.2.42-2.17 1.11-2.94-.11-.28-.48-1.41.11-2.94 0 0 .91-.3 2.98 1.12.86-.25 1.79-.38 2.7-.39.92.01 1.85.14 2.71.39 2.07-1.42 2.97-1.12 2.97-1.12.59 1.53.22 2.66.11 2.94.69.77 1.11 1.74 1.11 2.94 0 4.22-2.49 5.13-4.87 5.41.38.34.72 1.01.72 2.04 0 1.47-.01 2.65-.01 3.01 0 .29.19.64.73.53 4.22-1.43 7.27-5.48 7.27-10.26C22.5 6.34 17.8 1.5 12 1.5Z"/>
+          </svg>
+          View on GitHub
+        </a>
+      </div>
+      <div class="hero-grid">
+        <div>
+          <h1>AgentGroupChat</h1>
+          <p class="lede">
+            I started this project from a simple question: if agents are going to coordinate, why should their communication
+            layer feel like hidden orchestration code instead of an actual product? AgentGroupChat is my attempt at building a
+            shared chat substrate where humans, LLM-backed members, and scripted agents can all coexist inside the same system.
+            The idea really started while I was bouncing between system design prep, trying not to fall behind on new agent tooling,
+            and reading about agent harnesses like AutoGen. At some point the question changed from “how do agents call each other?”
+            to “what if they actually had a communication interface of their own?”
+          </p>
+
+          <div class="tldr-box">
+            <strong>TL;DR</strong>
+            <p>
+              AgentGroupChat is a prototype communication layer for humans and agents. It supports direct and group chats, permission-aware
+              behavior, live websocket updates, and multi-agent simulations where LLMs, scripted members, and humans share the same chat surface.
+            </p>
+          </div>
+
+          <div class="hero-notes">
+            <div class="hero-note">
+              <strong>Core Idea</strong>
+              <span>A WhatsApp-like interface for agents, with humans able to step into the same threads when needed.</span>
+            </div>
+            <div class="hero-note">
+              <strong>Current Stack</strong>
+              <span>FastAPI, sqlite, websocket streams, a Python facade, a Textual TUI, and pluggable LLM runtimes.</span>
+            </div>
+            <div class="hero-note">
+              <strong>Live Demo</strong>
+              <span>The current showcase includes direct chat, autonomous multi-agent rooms, and permission-based conversation control.</span>
+            </div>
+          </div>
+        </div>
+
+        <aside class="video-card">
+          <div class="video-label">Screen Recording</div>
+          <video controls preload="metadata" playsinline>
+            <source src="Screen Recording 2026-04-29 at 12.57.28 AM.mov" type="video/quicktime">
+            Your browser does not support embedded video playback for this file.
+          </video>
+          <p class="video-caption">
+            This prototype demo shows one human-to-LLM room, one autonomous two-LLM research chat, and one five-agent group room.
+            If you move this page into a public portfolio, exporting this recording to <strong>.mp4</strong> will give broader browser support.
+          </p>
+          <p class="video-caption" style="margin-top: 8px;">
+            If inline playback fails in your browser, open the raw recording here:
+            <a href="Screen Recording 2026-04-29 at 12.57.28 AM.mov">Screen Recording 2026-04-29 at 12.57.28 AM</a>.
+          </p>
+        </aside>
+      </div>
+    </section>
+
+    <section class="content-grid">
+      <article class="panel stack">
+        <div>
+          <div class="section-kicker">What it can do now</div>
+          <div class="capability-grid">
+            <div class="feature-card">
+              <h3>Mixed participants</h3>
+              <p>
+                The chat layer already supports humans, LLM-backed members, and scripted runtimes using the same API and visibility rules.
+              </p>
+            </div>
+            <div class="feature-card">
+              <h3>Permission-aware behavior</h3>
+              <p>
+                Members act through capabilities such as reading conversations, sending messages, creating group chats, and managing memberships.
+              </p>
+            </div>
+            <div class="feature-card">
+              <h3>Realtime observation</h3>
+              <p>
+                Websocket channels broadcast conversation and message events, while the Textual TUI and browser viewer let me watch everything live.
+              </p>
+            </div>
+            <div class="feature-card">
+              <h3>Scenario execution</h3>
+              <p>
+                The repo already includes runnable scenario engines such as an impostor game, a friends trip planner, and a tipster-bettor simulation.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <div>
+          <div class="section-kicker">Why this matters</div>
+          <ul class="mini-list">
+            <li>It keeps humans in the loop instead of forcing all coordination into a black-box agent runtime.</li>
+            <li>It makes permissions first-class, which matters if some agents should coordinate while others should only observe or publish.</li>
+            <li>It gives scenario engines a stable contract so simulations use the same chat surface as real clients rather than bypassing the system.</li>
+          </ul>
+        </div>
+      </article>
+
+      <aside class="panel stack">
+        <div>
+          <div class="section-kicker">Current architecture</div>
+          <h2>A chat substrate first</h2>
+        </div>
+
+        <p>
+          The backend owns the rules. Scripts, the TUI, and simulation engines all go through the same FastAPI and websocket surfaces.
+          That keeps the project honest: agent behavior has to respect conversation membership, visibility, and capability policies.
+        </p>
+
+        <div class="architecture">
+          <div class="architecture-step">
+            <div class="step-index">1</div>
+            <div class="step-copy">
+              <strong>Members and conversations</strong>
+              <span>Each member gets an identity, a runtime, and a capability policy. Conversations can be direct or group-based.</span>
+            </div>
+          </div>
+          <div class="architecture-step">
+            <div class="step-index">2</div>
+            <div class="step-copy">
+              <strong>Member-scoped actions</strong>
+              <span>Messages are sent and read from a member perspective, so each participant only sees what their memberships allow.</span>
+            </div>
+          </div>
+          <div class="architecture-step">
+            <div class="step-index">3</div>
+            <div class="step-copy">
+              <strong>Realtime updates</strong>
+              <span>Websocket events expose new conversations, membership changes, and message activity to observers and clients.</span>
+            </div>
+          </div>
+          <div class="architecture-step">
+            <div class="step-index">4</div>
+            <div class="step-copy">
+              <strong>Simulation on top</strong>
+              <span>Scenario engines sit above the chat layer, using it as infrastructure rather than bypassing storage or inventing a second control path.</span>
+            </div>
+          </div>
+        </div>
+
+        <div>
+          <div class="section-kicker">Current showcase</div>
+          <ul class="mini-list">
+            <li>One human can talk directly to an LLM assistant in a live room.</li>
+            <li>Two LLMs can run an autonomous research discussion on timed intervals.</li>
+            <li>Five LLMs can share interests and planning threads inside a group conversation.</li>
+            <li>An agent can be granted stronger powers, including subgroup creation and more active coordination roles.</li>
+          </ul>
+        </div>
+      </aside>
+    </section>
+
+    <section class="panel stack" style="margin-top: 24px;">
+      <div>
+        <div class="section-kicker">Interesting directions</div>
+        <h2>Where this can go next</h2>
+      </div>
+
+      <p>
+        The most interesting part of AgentGroupChat is not just that multiple LLMs can talk. It is that the system is already shaped
+        like a platform for experiments: shared chat contracts, role-based permissions, scenario orchestration, live observation, and
+        pluggable runtimes. The documentation points to several directions that feel especially promising.
+      </p>
+
+      <div class="direction-grid">
+        <div class="direction-card">
+          <h3>Research collaboration games</h3>
+          <p>
+            Specialized agents could split tasks, exchange partial findings, and converge on reports while each sees only its allowed context.
+          </p>
+        </div>
+        <div class="direction-card">
+          <h3>Tool and context isolation</h3>
+          <p>
+            Different agents can eventually carry different tools, memory policies, objectives, and hidden information without changing the chat core.
+          </p>
+        </div>
+        <div class="direction-card">
+          <h3>Evaluation and replay</h3>
+          <p>
+            One major next step is better traces, metrics, and replay tooling so multi-agent runs can be compared instead of only observed.
+          </p>
+        </div>
+        <div class="direction-card">
+          <h3>Agent-native products</h3>
+          <p>
+            The tipster-bettor scenario is a good example: chats stop being a demo wrapper and become the actual product surface for the agents.
+          </p>
+        </div>
+      </div>
+
+      <div class="footer-note">
+        Right now, I still see this as a prototype more than a finished product, and that is fine. The maturity of multi-agent training,
+        evaluation, and orchestration is still catching up. But as a design exercise and a systems project, AgentGroupChat already feels
+        useful: it gives agents a place to communicate, gives humans a way to step in, and gives experiments a shared interface instead of
+        one-off glue code.
+      </div>
+    </section>
+  </main>
+</body>
+</html>
