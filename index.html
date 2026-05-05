@@ -1,369 +1,445 @@
-<!DOCTYPE HTML>
-<!--
-	Miniport by HTML5 UP
-	html5up.net | @ajlkn
-	Free for personal and commercial use under the CCA 3.0 license (html5up.net/license)
--->
-<html>
-	<head>
-		<title>Jorge Medina | Research & Projects</title>
-		<meta charset="utf-8" />
-		<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no" />
-		<link rel="stylesheet" href="assets/css/main.css" />
-		<style>
-			/* Smaller, aligned card buttons */
-			.box.style2 .button.small {
-				padding: 0.45em 1.1em;
-				font-size: 0.72em;
-				letter-spacing: 0.01em;
-			}
-			.box.style2 ul.actions {
-				display: flex;
-				flex-wrap: wrap;
-				align-items: center;
-				justify-content: center;
-				gap: 0.4em;
-				padding-left: 0;
-				list-style: none;
-				margin-top: 0.6em;
-			}
-			.box.style2 ul.actions li {
-				padding-left: 0;
-			}
-			/* Slightly smaller boxes and text */
-			.box.style2 {
-				padding: 1.4em;
-				font-size: 0.9em;
-			}
-			/* Fix image bleed offsets to match new padding (was 2em, now 1.4em) */
-			.box.style2 .image {
-				left: 1.4em;
-				top: 1.4em;
-				margin: -2.8em 0 2.8em -2.8em;
-			}
-			.box.style2 h3 {
-				font-size: 1.1em;
-				margin-bottom: 0.2em;
-			}
-			.box.style2 p {
-				font-size: 0.9em;
-				margin-bottom: 0.5em;
-			}
-			/* Responsive sidebar */
-			@media screen and (max-width: 980px) {
-				#portfolio {
-					flex: 0 0 100% !important;
-					max-width: 100% !important;
-					border-left: none !important;
-					padding-left: 0 !important;
-					margin-top: 2em;
-				}
-				#portfolio ~ div {
-					flex: 0 0 100% !important;
-					max-width: 100% !important;
-					padding-right: 0 !important;
-				}
-			}
-		</style>
-	</head>
-	<body class="is-preload">
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Jorge Medina | Research & Projects</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500&family=Playfair+Display:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #fcfcfc;
+            color: #1a1a1a;
+            scroll-behavior: smooth;
+        }
+        .serif { font-family: 'Playfair Display', serif; }
+        .project-row:hover .project-image {
+            opacity: 1;
+            transform: translateX(0) scale(1);
+        }
+        .project-image {
+            opacity: 0;
+            transform: translateX(20px) scale(0.95);
+            transition: all 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+            pointer-events: none;
+        }
+        .nav-link { position: relative; }
+        .nav-link::after {
+            content: '';
+            position: absolute;
+            width: 0;
+            height: 1px;
+            bottom: -2px;
+            left: 0;
+            background-color: #1a1a1a;
+            transition: width 0.3s ease;
+        }
+        .nav-link:hover::after { width: 100%; }
+        section { padding: 120px 0; }
+        .border-subtle { border-color: #efefef; }
+        .text-balanced { text-wrap: balance; }
+        /* RL env card hover */
+        .env-card {
+            transition: border-color 0.3s ease, transform 0.3s ease;
+        }
+        .env-card:hover {
+            border-color: #d4d4d4;
+            transform: translateY(-2px);
+        }
+        /* details open chevron */
+        details[open] .rl-chevron {
+            transform: rotate(180deg);
+        }
+        details summary::-webkit-details-marker { display: none; }
+        details summary::marker { display: none; }
+    </style>
+</head>
+<body class="selection:bg-zinc-200">
 
-		<!-- Nav -->
-			<nav id="nav">
-				<ul class="container">
-					<li><a href="#top">Top</a></li>
-					<li><a href="#portfolio">Portfolio</a></li>
-					<li><a href="#projects">Papers</a></li>
-					<li><a href="#contact">Contact</a></li>
-				</ul>
-			</nav>
+    <!-- Navigation -->
+    <nav class="fixed top-0 w-full z-50 bg-white/80 backdrop-blur-md border-b border-subtle">
+        <div class="max-w-6xl mx-auto px-8 h-20 flex items-center justify-between">
+            <a href="#" class="serif text-2xl font-bold tracking-tight">JM</a>
+            <div class="flex gap-10 text-[10px] font-semibold tracking-[0.2em] uppercase">
+                <a href="#about" class="nav-link">About</a>
+                <a href="#portfolio" class="nav-link">Portfolio</a>
+                <a href="#research" class="nav-link">Research</a>
+                <a href="#contact" class="nav-link text-zinc-400 hover:text-black">Contact</a>
+            </div>
+        </div>
+    </nav>
 
-		<!-- Home -->
-			<article id="top" class="wrapper style1">
-				<div class="container">
-					<div class="row">
-						<div class="col-4 col-5-large col-12-medium">
-							<span class="image fit"><img src="images/1769462841517.jpeg" alt="" /></span>
-						</div>
-						<div class="col-8 col-7-large col-12-medium">
-							<header>
-								<h1>Hi. I'm <strong>Jorge Medina</strong>.</h1>
-							</header>
-							<p>And this is <strong>my personal webpage</strong>, where I share projects, blog posts on topics I find interesting, and a lot of science. This website is still under construction.</p>
-							<a href="#projects" class="button large scrolly">See my projects</a>
-						</div>
-					</div>
-				</div>
-			</article>
+    <main class="max-w-6xl mx-auto px-8">
+
+        <!-- Hero / About -->
+        <section id="about" class="pt-52 pb-40">
+            <div class="max-w-4xl">
+                <h1 class="serif text-6xl md:text-8xl mb-12 leading-[1.1] tracking-tight text-balanced">
+                    Jorge Medina <br>
+                    <span class="italic text-zinc-400">Research & Systems</span>
+                </h1>
+                <p class="text-2xl text-zinc-500 leading-relaxed font-light max-w-2xl">
+                    Architecting the digital substrate for autonomous scientific discovery. Bridging the gap between Large Language Models and Molecular Dynamics.
+                </p>
+                <div class="mt-16 flex items-center gap-10">
+                    <a href="#portfolio" class="group flex items-center gap-3 text-sm font-medium">
+                        View Portfolio
+                        <span class="w-8 h-[1px] bg-black group-hover:w-12 transition-all"></span>
+                    </a>
+                    <a href="https://github.com/Jgmedina95" target="_blank" class="text-sm font-medium text-zinc-400 hover:text-black transition-colors">GitHub</a>
+                </div>
+            </div>
+        </section>
+
+        <!-- Portfolio Section -->
+        <section id="portfolio" class="border-t border-subtle">
+            <div class="flex flex-col md:flex-row justify-between mb-24 gap-8">
+                <h2 class="serif text-4xl italic">Selected Work</h2>
+                <div class="max-w-sm">
+                    <p class="text-sm text-zinc-400 leading-relaxed uppercase tracking-wider">
+                        01 — ARCHITECTURES<br>
+                        02 — RL ENVIRONMENTS<br>
+                        03 — SIMULATIONS<br>
+                        04 — REASONING GRAPHS
+                    </p>
+                </div>
+            </div>
+
+            <div class="space-y-0">
+
+                <!-- AgentGroupChat -->
+                <a href="portfolio/agentgroupchat/agentgroupchat_portfolio_post.html" class="project-row block group relative py-16 border-b border-subtle">
+                    <div class="flex items-center justify-between gap-12">
+                        <div class="flex-1">
+                            <span class="text-[10px] font-mono text-zinc-400 mb-4 block tracking-widest uppercase">Substrate / Architecture</span>
+                            <h3 class="serif text-3xl md:text-4xl group-hover:italic transition-all duration-500">AgentGroupChat</h3>
+                            <p class="mt-6 text-zinc-500 max-w-2xl text-lg font-light leading-relaxed">A shared chat substrate for humans and LLM agents with direct chats, group rooms, granular permissions, and real-time websocket synchronization.</p>
+                        </div>
+                        <div class="hidden lg:block w-72 h-48 bg-zinc-100 overflow-hidden rounded-sm project-image">
+                            <svg viewBox="0 0 260 192" width="100%" height="100%">
+                                <defs>
+                                    <linearGradient id="chat-bg" x1="0%" y1="0%" x2="100%" y2="100%">
+                                        <stop offset="0%" stop-color="#122033"/>
+                                        <stop offset="100%" stop-color="#1f4b59"/>
+                                    </linearGradient>
+                                </defs>
+                                <rect width="260" height="192" fill="url(#chat-bg)"/>
+                                <circle cx="52" cy="55" r="16" fill="#0f172a" stroke="#f8fafc" stroke-width="1.5" opacity="0.85"/>
+                                <text x="52" y="60" text-anchor="middle" font-family="Helvetica Neue, sans-serif" font-size="11" fill="#f8fafc" font-weight="700">H</text>
+                                <circle cx="208" cy="42" r="16" fill="#0f172a" stroke="#93c5fd" stroke-width="1.5" opacity="0.9"/>
+                                <text x="208" y="47" text-anchor="middle" font-family="Helvetica Neue, sans-serif" font-size="10" fill="#93c5fd" font-weight="700">LLM</text>
+                                <circle cx="208" cy="148" r="16" fill="#0f172a" stroke="#86efac" stroke-width="1.5" opacity="0.9"/>
+                                <text x="208" y="153" text-anchor="middle" font-family="Helvetica Neue, sans-serif" font-size="9.5" fill="#86efac" font-weight="700">BOT</text>
+                                <path d="M66 55 C102 55, 116 44, 162 44" fill="none" stroke="#fcd34d" stroke-width="2" stroke-dasharray="5 5" opacity="0.7"/>
+                                <path d="M66 63 C116 77, 132 124, 192 144" fill="none" stroke="#67e8f9" stroke-width="2" stroke-dasharray="5 5" opacity="0.65"/>
+                                <rect x="72" y="28" width="96" height="24" rx="12" fill="#f59e0b"/>
+                                <text x="120" y="44" text-anchor="middle" font-family="Helvetica Neue, sans-serif" font-size="10" fill="#fff7ed" font-weight="600">Plan the next step</text>
+                                <rect x="88" y="82" width="112" height="24" rx="12" fill="#38bdf8"/>
+                                <text x="144" y="98" text-anchor="middle" font-family="Helvetica Neue, sans-serif" font-size="10" fill="#ecfeff" font-weight="600">I can open a group room</text>
+                            </svg>
+                        </div>
+                    </div>
+                </a>
+
+                <!-- RL Environments — expandable row -->
+                <details class="group/rl border-b border-subtle">
+                    <summary class="flex items-center justify-between py-10 cursor-pointer list-none select-none">
+                        <div>
+                            <span class="text-[10px] font-mono text-zinc-400 mb-3 block tracking-widest uppercase">Personal Projects / RL</span>
+                            <h3 class="serif text-3xl md:text-4xl group-hover/rl:italic transition-all duration-500">RL Environments</h3>
+                            <p class="mt-3 text-zinc-500 max-w-xl text-base font-light leading-relaxed">Scientific simulators designed so LLMs learn via verifiable reward signals grounded in physics.</p>
+                        </div>
+                        <div class="flex-shrink-0 flex flex-col items-center gap-1 ml-8">
+                            <span class="text-[9px] font-mono text-zinc-400 tracking-widest uppercase">3 envs</span>
+                            <span class="rl-chevron text-zinc-400 text-lg transition-transform duration-300">↓</span>
+                        </div>
+                    </summary>
+
+                    <!-- List of environments -->
+                    <div class="pb-10 space-y-0">
+
+                        <!-- Crystal Relaxation -->
+                        <a href="GRPO_For_Materials/blog_post.html" class="flex items-start gap-5 py-5 border-t border-[#f5f5f5] group/env hover:bg-zinc-50 transition-colors rounded-sm px-1">
+                            <!-- Thumbnail -->
+                            <div class="flex-shrink-0 w-20 h-16 overflow-hidden rounded-sm bg-zinc-100 relative">
+                                <div id="rl-crystal-vis-sm" style="position:absolute; inset:0; overflow:hidden;">
+                                    <div class="rl-crys-state-sm" style="position:absolute; inset:0; display:flex; align-items:center; justify-content:center; transition:opacity 0.6s;">
+                                        <svg viewBox="0 0 100 80" width="80" height="64">
+                                            <rect x="8" y="6" width="84" height="62" fill="none" stroke="#94a3b8" stroke-width="1.5" stroke-dasharray="4,2" rx="2"/>
+                                            <circle cx="22" cy="20" r="9" fill="#3b82f6" stroke="#1d4ed8" stroke-width="1.5"/>
+                                            <text x="22" y="24" text-anchor="middle" fill="#fff" font-size="8" font-weight="700">Ti</text>
+                                            <circle cx="82" cy="18" r="9" fill="#3b82f6" stroke="#1d4ed8" stroke-width="1.5"/>
+                                            <text x="82" y="22" text-anchor="middle" fill="#fff" font-size="8" font-weight="700">Ti</text>
+                                            <circle cx="50" cy="65" r="6" fill="#ef4444" stroke="#dc2626" stroke-width="1.5"/>
+                                            <text x="50" y="68" text-anchor="middle" fill="#fff" font-size="6" font-weight="700">H</text>
+                                        </svg>
+                                    </div>
+                                    <div class="rl-crys-state-sm" style="position:absolute; inset:0; display:flex; align-items:center; justify-content:center; opacity:0; transition:opacity 0.6s;">
+                                        <svg viewBox="0 0 100 80" width="80" height="64">
+                                            <rect x="8" y="6" width="84" height="62" fill="none" stroke="#94a3b8" stroke-width="1.5" stroke-dasharray="4,2" rx="2"/>
+                                            <circle cx="18" cy="18" r="9" fill="#3b82f6" stroke="#1d4ed8" stroke-width="1.5"/>
+                                            <text x="18" y="22" text-anchor="middle" fill="#fff" font-size="8" font-weight="700">Ti</text>
+                                            <circle cx="82" cy="18" r="9" fill="#3b82f6" stroke="#1d4ed8" stroke-width="1.5"/>
+                                            <text x="82" y="22" text-anchor="middle" fill="#fff" font-size="8" font-weight="700">Ti</text>
+                                            <circle cx="50" cy="60" r="6" fill="#22c55e" stroke="#15803d" stroke-width="1.5"/>
+                                            <text x="50" y="63" text-anchor="middle" fill="#fff" font-size="6" font-weight="700">H</text>
+                                        </svg>
+                                    </div>
+                                </div>
+                            </div>
+                            <!-- Text -->
+                            <div class="flex-1 min-w-0">
+                                <div class="flex items-baseline gap-3 flex-wrap">
+                                    <span class="font-medium text-sm text-zinc-900 group-hover/env:underline underline-offset-2">Crystal Relaxation</span>
+                                    <span class="text-[9px] font-mono text-zinc-400 tracking-widest uppercase bg-zinc-100 px-2 py-0.5 rounded">CHGNet</span>
+                                    <span class="text-[9px] font-mono text-zinc-400 tracking-widest uppercase bg-zinc-100 px-2 py-0.5 rounded">Materials</span>
+                                    <span class="text-[9px] font-mono text-emerald-600 tracking-widest uppercase bg-emerald-50 px-2 py-0.5 rounded">Blog Post ↗</span>
+                                </div>
+                                <p class="mt-1 text-sm text-zinc-500 font-light leading-relaxed">GRPO environment for crystal structure relaxation using CHGNet as a force-field surrogate. Reward is formation energy convergence.</p>
+                            </div>
+                        </a>
+
+                        <!-- Molecule DFT RL -->
+                        <div class="flex items-start gap-5 py-5 border-t border-[#f5f5f5] group/env px-1">
+                            <div class="flex-shrink-0 w-20 h-16 overflow-hidden rounded-sm bg-zinc-50 flex items-center justify-center">
+                                <svg viewBox="0 0 100 80" width="80" height="64">
+                                    <defs>
+                                        <radialGradient id="mol-glow-sm" cx="50%" cy="50%" r="50%">
+                                            <stop offset="0%" stop-color="#818cf8" stop-opacity="0.4"/>
+                                            <stop offset="100%" stop-color="#818cf8" stop-opacity="0"/>
+                                        </radialGradient>
+                                    </defs>
+                                    <rect width="100" height="80" fill="#f8fafc"/>
+                                    <ellipse cx="50" cy="38" rx="28" ry="22" fill="url(#mol-glow-sm)"/>
+                                    <line x1="35" y1="30" x2="50" y2="20" stroke="#94a3b8" stroke-width="1.5"/>
+                                    <line x1="65" y1="30" x2="50" y2="20" stroke="#94a3b8" stroke-width="1.5"/>
+                                    <line x1="35" y1="30" x2="35" y2="46" stroke="#94a3b8" stroke-width="1.5"/>
+                                    <line x1="65" y1="30" x2="65" y2="46" stroke="#94a3b8" stroke-width="1.5"/>
+                                    <line x1="35" y1="46" x2="50" y2="56" stroke="#94a3b8" stroke-width="1.5"/>
+                                    <line x1="65" y1="46" x2="50" y2="56" stroke="#94a3b8" stroke-width="1.5"/>
+                                    <circle cx="50" cy="20" r="6" fill="#818cf8" stroke="#6366f1" stroke-width="1"/>
+                                    <circle cx="35" cy="30" r="5" fill="#818cf8" stroke="#6366f1" stroke-width="1"/>
+                                    <circle cx="65" cy="30" r="5" fill="#818cf8" stroke="#6366f1" stroke-width="1"/>
+                                    <circle cx="35" cy="46" r="5" fill="#818cf8" stroke="#6366f1" stroke-width="1"/>
+                                    <circle cx="65" cy="46" r="5" fill="#818cf8" stroke="#6366f1" stroke-width="1"/>
+                                    <circle cx="50" cy="56" r="6" fill="#f59e0b" stroke="#d97706" stroke-width="1"/>
+                                    <rect x="15" y="66" width="70" height="11" rx="2" fill="#eef2ff" stroke="#c7d2fe" stroke-width="0.8"/>
+                                    <text x="50" y="74" text-anchor="middle" fill="#4338ca" font-size="6" font-weight="600">ΔE_DFT → reward</text>
+                                </svg>
+                            </div>
+                            <div class="flex-1 min-w-0">
+                                <div class="flex items-baseline gap-3 flex-wrap">
+                                    <span class="font-medium text-sm text-zinc-900">Molecule DFT RL</span>
+                                    <span class="text-[9px] font-mono text-zinc-400 tracking-widest uppercase bg-zinc-100 px-2 py-0.5 rounded">PySCF</span>
+                                    <span class="text-[9px] font-mono text-zinc-400 tracking-widest uppercase bg-zinc-100 px-2 py-0.5 rounded">Quantum Chem</span>
+                                    <span class="text-[9px] font-mono text-zinc-300 tracking-widest uppercase bg-zinc-50 px-2 py-0.5 rounded">Coming Soon</span>
+                                </div>
+                                <p class="mt-1 text-sm text-zinc-500 font-light leading-relaxed">Agent proposes molecular geometries or substitutions; rewards grounded in DFT energy calculations via PySCF.</p>
+                            </div>
+                        </div>
+
+                        <!-- OpenMM Environment -->
+                        <div class="flex items-start gap-5 py-5 border-t border-[#f5f5f5] group/env px-1">
+                            <div class="flex-shrink-0 w-20 h-16 overflow-hidden rounded-sm bg-zinc-900 flex items-center justify-center relative">
+                                <svg viewBox="0 0 100 80" width="80" height="64">
+                                    <rect width="100" height="80" fill="#0d1b2a"/>
+                                    <rect x="8" y="6" width="84" height="62" fill="none" stroke="#1e3a5f" stroke-width="1.2" rx="2"/>
+                                    <g opacity="0.9">
+                                        <animateTransform attributeName="transform" type="translate" values="0,0;1,-1;0,0;-1,1;0,0" dur="4s" repeatCount="indefinite"/>
+                                        <circle cx="28" cy="28" r="5" fill="#3b82f6" stroke="#1d4ed8" stroke-width="1"/>
+                                        <text x="28" y="31" text-anchor="middle" fill="#fff" font-size="5" font-weight="700">O</text>
+                                        <circle cx="21" cy="22" r="3.5" fill="#f1f5f9" stroke="#94a3b8" stroke-width="0.7"/>
+                                        <circle cx="35" cy="22" r="3.5" fill="#f1f5f9" stroke="#94a3b8" stroke-width="0.7"/>
+                                        <line x1="28" y1="24" x2="23" y2="22" stroke="#64748b" stroke-width="0.8"/>
+                                        <line x1="28" y1="24" x2="33" y2="22" stroke="#64748b" stroke-width="0.8"/>
+                                    </g>
+                                    <g opacity="0.85">
+                                        <animateTransform attributeName="transform" type="translate" values="0,0;-1,1;0,0;1,-1;0,0" dur="3.5s" repeatCount="indefinite"/>
+                                        <circle cx="65" cy="40" r="5" fill="#3b82f6" stroke="#1d4ed8" stroke-width="1"/>
+                                        <text x="65" y="43" text-anchor="middle" fill="#fff" font-size="5" font-weight="700">O</text>
+                                        <circle cx="58" cy="34" r="3.5" fill="#f1f5f9" stroke="#94a3b8" stroke-width="0.7"/>
+                                        <circle cx="72" cy="34" r="3.5" fill="#f1f5f9" stroke="#94a3b8" stroke-width="0.7"/>
+                                        <line x1="65" y1="36" x2="60" y2="34" stroke="#64748b" stroke-width="0.8"/>
+                                        <line x1="65" y1="36" x2="70" y2="34" stroke="#64748b" stroke-width="0.8"/>
+                                    </g>
+                                    <g opacity="0.8">
+                                        <animateTransform attributeName="transform" type="translate" values="0,0;1,1;0,0;-1,-1;0,0" dur="5s" repeatCount="indefinite"/>
+                                        <circle cx="42" cy="58" r="5" fill="#3b82f6" stroke="#1d4ed8" stroke-width="1"/>
+                                        <text x="42" y="61" text-anchor="middle" fill="#fff" font-size="5" font-weight="700">O</text>
+                                        <circle cx="35" cy="52" r="3.5" fill="#f1f5f9" stroke="#94a3b8" stroke-width="0.7"/>
+                                        <circle cx="49" cy="52" r="3.5" fill="#f1f5f9" stroke="#94a3b8" stroke-width="0.7"/>
+                                        <line x1="42" y1="54" x2="37" y2="52" stroke="#64748b" stroke-width="0.8"/>
+                                        <line x1="42" y1="54" x2="47" y2="52" stroke="#64748b" stroke-width="0.8"/>
+                                    </g>
+                                    <rect x="12" y="68" width="76" height="9" rx="2" fill="#1e3a5f" opacity="0.9"/>
+                                    <text x="50" y="74.5" text-anchor="middle" fill="#93c5fd" font-size="5.5" font-weight="600">NPT · 300K · OpenMM</text>
+                                </svg>
+                            </div>
+                            <div class="flex-1 min-w-0">
+                                <div class="flex items-baseline gap-3 flex-wrap">
+                                    <span class="font-medium text-sm text-zinc-900">OpenMM Environment</span>
+                                    <span class="text-[9px] font-mono text-zinc-400 tracking-widest uppercase bg-zinc-100 px-2 py-0.5 rounded">OpenMM</span>
+                                    <span class="text-[9px] font-mono text-zinc-400 tracking-widest uppercase bg-zinc-100 px-2 py-0.5 rounded">MD</span>
+                                    <span class="text-[9px] font-mono text-zinc-300 tracking-widest uppercase bg-zinc-50 px-2 py-0.5 rounded">Coming Soon</span>
+                                </div>
+                                <p class="mt-1 text-sm text-zinc-500 font-light leading-relaxed">MD RL environment wrapping OpenMM; agent iterates simulation parameters, rewarded by thermodynamic stability and convergence.</p>
+                            </div>
+                        </div>
+
+                    </div>
+                </details>
+
+                <!-- Drug Discovery Pipeline -->
+                <a href="portfolio/agentic_pipeline_for_drugdiscovery/day1.html" class="project-row block group relative py-16 border-b border-subtle">
+                    <div class="flex items-center justify-between gap-12">
+                        <div class="flex-1">
+                            <span class="text-[10px] font-mono text-zinc-400 mb-4 block tracking-widest uppercase">Simulation / AI</span>
+                            <h3 class="serif text-3xl md:text-4xl group-hover:italic transition-all duration-500">Drug Discovery Pipeline</h3>
+                            <p class="mt-6 text-zinc-500 max-w-2xl text-lg font-light leading-relaxed">Fully self-contained environments for LLM agents to run protein-ligand simulations via Bayesian optimization — verifiable enough to train with GRPO.</p>
+                        </div>
+                        <div class="hidden lg:block w-72 h-48 bg-zinc-100 overflow-hidden rounded-sm project-image">
+                            <svg viewBox="0 0 260 192" width="100%" height="100%">
+                                <rect width="260" height="192" fill="#0d1b2a"/>
+                                <path d="M 30 95 Q 55 68 80 95 Q 105 122 130 95 Q 155 68 180 95 Q 205 122 230 95" fill="none" stroke="#4a9eff" stroke-width="4" stroke-linecap="round" opacity="0.7">
+                                    <animate attributeName="opacity" values="0.7;1;0.7" dur="3s" repeatCount="indefinite"/>
+                                </path>
+                                <line x1="55" y1="82" x2="55" y2="58" stroke="#60a5fa" stroke-width="1.5" opacity="0.6"/>
+                                <circle cx="55" cy="54" r="5" fill="#60a5fa" opacity="0.8"/>
+                                <line x1="130" y1="108" x2="130" y2="132" stroke="#60a5fa" stroke-width="1.5" opacity="0.6"/>
+                                <circle cx="130" cy="136" r="5" fill="#60a5fa" opacity="0.8"/>
+                                <g>
+                                    <animateTransform attributeName="transform" type="translate" values="0,0; 0,-14; 0,0" dur="3s" repeatCount="indefinite"/>
+                                    <polygon points="130,152 122,160 125,170 135,170 138,160" fill="none" stroke="#f59e0b" stroke-width="2"/>
+                                    <circle cx="130" cy="152" r="3" fill="#f59e0b"/>
+                                    <circle cx="120" cy="162" r="3" fill="#f59e0b"/>
+                                    <circle cx="140" cy="162" r="3" fill="#f59e0b"/>
+                                </g>
+                                <circle cx="130" cy="93" r="7" fill="#a78bfa" stroke="#7c3aed" stroke-width="1.5">
+                                    <animate attributeName="r" values="7;8.5;7" dur="3s" repeatCount="indefinite"/>
+                                </circle>
+                                <text x="130" y="97" text-anchor="middle" font-family="monospace" font-size="7" fill="#fff" font-weight="bold">Zn</text>
+                                <rect x="5" y="4" width="120" height="16" rx="3" fill="#1e3a5f" opacity="0.8"/>
+                                <text x="10" y="15" font-family="Helvetica Neue, sans-serif" font-size="8.5" fill="#93c5fd" font-weight="600">1CA2 + Acetazolamide</text>
+                            </svg>
+                        </div>
+                    </div>
+                </a>
+
+                <!-- Dependency Graphs -->
+                <a href="portfolio/dependency_graphs_for_agents/index.html" class="project-row block group relative py-16 border-b border-subtle">
+                    <div class="flex items-center justify-between gap-12">
+                        <div class="flex-1">
+                            <span class="text-[10px] font-mono text-zinc-400 mb-4 block tracking-widest uppercase">Reasoning / Graphs</span>
+                            <h3 class="serif text-3xl md:text-4xl group-hover:italic transition-all duration-500">Dependency Graphs</h3>
+                            <p class="mt-6 text-zinc-500 max-w-2xl text-lg font-light leading-relaxed">Normalizing tool schemas into executable dependency graphs, enabling agents to reason about complex task sequences instead of a flat tool list.</p>
+                        </div>
+                        <div class="hidden lg:block w-72 h-48 bg-zinc-100 overflow-hidden rounded-sm project-image">
+                            <img src="dependency_graphs_for_agents/graph_image.png" alt="Dependency graph" class="w-full h-full object-cover grayscale">
+                        </div>
+                    </div>
+                </a>
+
+            </div>
+        </section>
 
 
+        <!-- Research / Papers Section -->
+        <section id="research" class="border-t border-subtle" style="padding-top:60px;">
+            <div class="mb-16">
+                <h2 class="serif text-4xl italic mb-4">Selected Publications</h2>
+                <p class="text-zinc-400 text-sm tracking-wide uppercase">Advancing the intersection of Chemistry and Intelligence</p>
+            </div>
 
-		<!-- Research & Portfolio -->
-			<article id="projects" class="wrapper style3">
-				<div class="container">
-					<div style="display:flex; flex-wrap:wrap; align-items:flex-start;">
-						<div id="portfolio" style="order:2; flex:0 0 28%; max-width:28%; box-sizing:border-box; border-left:1px solid rgba(255,255,255,0.2); padding-left:2em;">
-							<header>
-								<h2><span class="icon solid fa-flask" style="margin-right:0.4em;"></span>Portfolio</h2>
-							</header>
-							<article class="box style2">
-								<a href="portfolio/agentgroupchat/agentgroupchat_portfolio_post.html" class="image featured" style="position:relative; display:block; overflow:hidden; background:#101924; height:220px;">
-									<svg viewBox="0 0 260 220" width="100%" height="220" style="display:block;">
-										<defs>
-											<linearGradient id="chat-bg" x1="0%" y1="0%" x2="100%" y2="100%">
-												<stop offset="0%" stop-color="#122033"/>
-												<stop offset="100%" stop-color="#1f4b59"/>
-											</linearGradient>
-											<linearGradient id="bubble-left" x1="0%" y1="0%" x2="100%" y2="100%">
-												<stop offset="0%" stop-color="#f59e0b"/>
-												<stop offset="100%" stop-color="#f97316"/>
-											</linearGradient>
-											<linearGradient id="bubble-right" x1="0%" y1="0%" x2="100%" y2="100%">
-												<stop offset="0%" stop-color="#38bdf8"/>
-												<stop offset="100%" stop-color="#22c55e"/>
-											</linearGradient>
-										</defs>
-										<rect width="260" height="220" fill="url(#chat-bg)"/>
-										<circle cx="52" cy="60" r="18" fill="#0f172a" stroke="#f8fafc" stroke-width="1.5" opacity="0.85"/>
-										<text x="52" y="65" text-anchor="middle" font-family="Helvetica Neue, sans-serif" font-size="11" fill="#f8fafc" font-weight="700">H</text>
-										<circle cx="208" cy="46" r="18" fill="#0f172a" stroke="#93c5fd" stroke-width="1.5" opacity="0.9"/>
-										<text x="208" y="51" text-anchor="middle" font-family="Helvetica Neue, sans-serif" font-size="10" fill="#93c5fd" font-weight="700">LLM</text>
-										<circle cx="208" cy="156" r="18" fill="#0f172a" stroke="#86efac" stroke-width="1.5" opacity="0.9"/>
-										<text x="208" y="161" text-anchor="middle" font-family="Helvetica Neue, sans-serif" font-size="9.5" fill="#86efac" font-weight="700">BOT</text>
-										<path d="M66 60 C102 60, 116 48, 160 48" fill="none" stroke="#fcd34d" stroke-width="2" stroke-dasharray="5 5" opacity="0.7"/>
-										<path d="M66 68 C116 82, 132 132, 188 152" fill="none" stroke="#67e8f9" stroke-width="2" stroke-dasharray="5 5" opacity="0.65"/>
-										<path d="M208 64 C208 92, 208 108, 208 138" fill="none" stroke="#c4b5fd" stroke-width="2" stroke-dasharray="4 6" opacity="0.55"/>
-										<rect x="72" y="34" width="96" height="28" rx="14" fill="url(#bubble-left)"/>
-										<text x="120" y="52" text-anchor="middle" font-family="Helvetica Neue, sans-serif" font-size="10.5" fill="#fff7ed" font-weight="600">Plan the next step</text>
-										<rect x="92" y="88" width="120" height="28" rx="14" fill="url(#bubble-right)"/>
-										<text x="152" y="106" text-anchor="middle" font-family="Helvetica Neue, sans-serif" font-size="10" fill="#ecfeff" font-weight="600">I can open a group room</text>
-										<rect x="54" y="142" width="108" height="28" rx="14" fill="rgba(255,255,255,0.14)" stroke="rgba(255,255,255,0.2)"/>
-										<text x="108" y="160" text-anchor="middle" font-family="Helvetica Neue, sans-serif" font-size="10" fill="#f8fafc" font-weight="600">Permissions + realtime</text>
-										<rect x="16" y="14" width="138" height="18" rx="9" fill="rgba(15,23,42,0.42)"/>
-										<text x="26" y="26" font-family="Helvetica Neue, sans-serif" font-size="8.5" fill="#e2e8f0" font-weight="600">Human + agent shared chat</text>
-									</svg>
-								</a>
-								<h3><a href="portfolio/agentgroupchat/agentgroupchat_portfolio_post.html">AgentGroupChat</a></h3>
-								<p>A shared chat substrate for humans, LLM-backed members, and scripted agents, with direct chats, group rooms, permissions, and live websocket updates.</p>
-								<ul class="actions">
-									<li><a class="button small" href="portfolio/agentgroupchat/agentgroupchat_portfolio_post.html">Read post</a></li>
-									<li><a class="button small" href="https://github.com/Jgmedina95/AgentGroupChat" target="_blank" rel="noopener noreferrer">GitHub</a></li>
-								</ul>
-							</article>
-							<article class="box style2">
-								<a href="portfolio/agentic_pipeline_for_drugdiscovery/day1.html" class="image featured" style="position:relative; display:block; overflow:hidden; background:#0d1b2a; height:220px;">
-									<svg id="protein-ligand-vis" viewBox="0 0 260 220" width="100%" height="220" style="display:block;">
-										<!-- Background -->
-										<rect width="260" height="220" fill="#0d1b2a"/>
-										<!-- Protein backbone helix ribbons -->
-										<path d="M 30 110 Q 55 80 80 110 Q 105 140 130 110 Q 155 80 180 110 Q 205 140 230 110" fill="none" stroke="#4a9eff" stroke-width="4" stroke-linecap="round" opacity="0.7">
-											<animate attributeName="opacity" values="0.7;1;0.7" dur="3s" repeatCount="indefinite"/>
-										</path>
-										<path d="M 30 120 Q 55 90 80 120 Q 105 150 130 120 Q 155 90 180 120 Q 205 150 230 120" fill="none" stroke="#3b82f6" stroke-width="2.5" stroke-linecap="round" opacity="0.4"/>
-										<!-- Side chains -->
-										<line x1="55" y1="97" x2="55" y2="70" stroke="#60a5fa" stroke-width="1.5" opacity="0.6"/>
-										<circle cx="55" cy="65" r="5" fill="#60a5fa" opacity="0.8"/>
-										<line x1="105" y1="130" x2="105" y2="155" stroke="#60a5fa" stroke-width="1.5" opacity="0.6"/>
-										<circle cx="105" cy="160" r="5" fill="#60a5fa" opacity="0.8"/>
-										<line x1="155" y1="97" x2="155" y2="70" stroke="#60a5fa" stroke-width="1.5" opacity="0.6"/>
-										<circle cx="155" cy="65" r="5" fill="#60a5fa" opacity="0.8"/>
-										<line x1="205" y1="130" x2="205" y2="155" stroke="#60a5fa" stroke-width="1.5" opacity="0.6"/>
-										<circle cx="205" cy="160" r="5" fill="#60a5fa" opacity="0.8"/>
-										<!-- Ligand approaching binding site -->
-										<g id="ligand-group">
-											<animateTransform attributeName="transform" type="translate" values="0,0; 0,-18; 0,0" dur="3s" repeatCount="indefinite"/>
-											<!-- Acetazolamide-like scaffold -->
-											<polygon points="130,168 120,178 124,191 136,191 140,178" fill="none" stroke="#f59e0b" stroke-width="2"/>
-											<circle cx="130" cy="168" r="3" fill="#f59e0b"/>
-											<circle cx="120" cy="178" r="3" fill="#f59e0b"/>
-											<circle cx="140" cy="178" r="3" fill="#f59e0b"/>
-											<circle cx="130" cy="196" r="4" fill="#fbbf24" stroke="#f59e0b" stroke-width="1.5"/>
-											<text x="130" y="200" text-anchor="middle" font-family="monospace" font-size="6" fill="#0d1b2a" font-weight="bold">S</text>
-											<circle cx="115" cy="174" r="3.5" fill="#818cf8"/>
-											<text x="115" y="177" text-anchor="middle" font-family="monospace" font-size="5.5" fill="#fff">N</text>
-											<circle cx="145" cy="174" r="3.5" fill="#818cf8"/>
-											<text x="145" y="177" text-anchor="middle" font-family="monospace" font-size="5.5" fill="#fff">N</text>
-										</g>
-										<!-- Zn2+ ion in binding site -->
-										<circle cx="130" cy="108" r="7" fill="#a78bfa" stroke="#7c3aed" stroke-width="1.5">
-											<animate attributeName="r" values="7;8.5;7" dur="3s" repeatCount="indefinite"/>
-										</circle>
-										<text x="130" y="112" text-anchor="middle" font-family="monospace" font-size="7" fill="#fff" font-weight="bold">Zn</text>
-										<!-- Binding flash effect -->
-										<circle cx="130" cy="108" r="14" fill="none" stroke="#a78bfa" stroke-width="1" opacity="0">
-											<animate attributeName="r" values="8;22;8" dur="3s" repeatCount="indefinite"/>
-											<animate attributeName="opacity" values="0;0.6;0" dur="3s" repeatCount="indefinite"/>
-										</circle>
-										<!-- Labels -->
-										<rect x="5" y="4" width="120" height="16" rx="3" fill="#1e3a5f" opacity="0.8"/>
-										<text x="10" y="15" font-family="Helvetica Neue, sans-serif" font-size="8.5" fill="#93c5fd" font-weight="600">1CA2 + Acetazolamide</text>
-										<rect x="135" y="4" width="120" height="16" rx="3" fill="#1e3a5f" opacity="0.8"/>
-										<text x="140" y="15" font-family="Helvetica Neue, sans-serif" font-size="8.5" fill="#fcd34d" font-weight="600">OpenMM · OpenFF · PDBFixer</text>
-									</svg>
-								</a>
-								<h3><a href="portfolio/agentic_pipeline_for_drugdiscovery/day1.html">Agentic Protein/Ligand Pipeline</a></h3>
-								<p>My approach to build a fully self-contained environment for an LLM agent to run protein-ligand simulations — designed so it can iterate via Bayesian optimization or be made verifiable enough to train with GRPO.</p>
-								<ul class="actions">
-									<li><a class="button small" href="portfolio/agentic_pipeline_for_drugdiscovery/day1.html">(Almost) Daily Log</a></li>
-								</ul>
-							</article>
-							<article class="box style2">
-								<a href="portfolio/dependency_graphs_for_agents/index.html" class="image featured" style="position:relative; display:block; overflow:hidden; background:#101923; height:220px;">
-									<img src="dependency_graphs_for_agents/graph_image.png" alt="Dependency graph snapshot" style="position:absolute; inset:0; width:100%; height:100%; object-fit:cover;" loading="lazy" />
-									<div style="position:absolute; left:0.9em; right:0.9em; bottom:0.9em; padding:0.6em 0.8em; border-radius:0.7em; background:rgba(16,25,35,0.78); color:#eff6ff; font-size:0.72em; font-weight:600; letter-spacing:0.04em; text-transform:uppercase;">Tool dependency graph</div>
-								</a>
-								<h3><a href="portfolio/dependency_graphs_for_agents/index.html">Dependency Graphs for Tool-Using Agents</a></h3>
-								<p>A mini-project from a pre-interview question: take raw tool schemas, normalize them with an LLM, and build a dependency graph so an agent can reason about tool order instead of treating tools like a flat list.</p>
-								<ul class="actions">
-									<li><a class="button small" href="portfolio/dependency_graphs_for_agents/index.html">Read post</a></li>
-									<li><a class="button small" href="dependency_graphs_for_agents/graph_image.png" target="_blank" rel="noopener noreferrer">View image</a></li>
-								</ul>
-							</article>
-							<p style="margin-top:1.5em; font-size:0.85em; opacity:0.75;">More demos coming soon.</p>
-						</div>
-						<div style="order:1; flex:0 0 66%; max-width:66%; box-sizing:border-box; padding-right:2em;">
-							<header>
-								<h2>Research &amp; Papers</h2>
-							</header>
-							<div class="row">
-								<div class="col-6 col-12-small">
-							<article class="box style2">
-								<a href="GRPO_For_Materials/blog_post.html" class="image featured" style="position:relative; display:block; overflow:hidden; background:#f8fafc;">
-									<div id="rl-crystal-vis" style="width:100%; height:220px; display:flex; align-items:center; justify-content:center;">
-										<!-- State 0 -->
-										<div class="rl-crys-state" style="position:absolute; text-align:center; transition:opacity 0.6s;">
-											<div style="font-weight:700; color:#ef4444; font-size:0.65em; margin-bottom:2px;">⚠ Unrelaxed</div>
-											<svg viewBox="0 0 260 280" width="180" height="190"><rect x="30" y="30" width="200" height="200" fill="none" stroke="#94a3b8" stroke-width="1.5" stroke-dasharray="6,3" rx="3"/><line x1="55" y1="55" x2="138" y2="230" stroke="#64748b" stroke-width="1.5" opacity=".5"/><line x1="210" y1="48" x2="138" y2="230" stroke="#64748b" stroke-width="1.5" opacity=".5"/><line x1="55" y1="55" x2="210" y2="48" stroke="#64748b" stroke-width="1.5" opacity=".5"/><line x1="55" y1="55" x2="30" y2="172" stroke="#64748b" stroke-width="1.5" opacity=".5"/><line x1="210" y1="48" x2="220" y2="165" stroke="#64748b" stroke-width="1.5" opacity=".5"/><circle cx="55" cy="55" r="18" fill="#3b82f6" stroke="#1d4ed8" stroke-width="2"/><text x="55" y="60" text-anchor="middle" fill="#fff" font-size="13" font-weight="700">Ti</text><circle cx="210" cy="48" r="18" fill="#3b82f6" stroke="#1d4ed8" stroke-width="2"/><text x="210" y="53" text-anchor="middle" fill="#fff" font-size="13" font-weight="700">Ti</text><circle cx="138" cy="230" r="12" fill="#22c55e" stroke="#15803d" stroke-width="2"/><text x="138" y="235" text-anchor="middle" fill="#fff" font-size="11" font-weight="700">H</text><circle cx="30" cy="172" r="12" fill="#22c55e" stroke="#15803d" stroke-width="2"/><text x="30" y="177" text-anchor="middle" fill="#fff" font-size="11" font-weight="700">H</text><circle cx="220" cy="165" r="12" fill="#22c55e" stroke="#15803d" stroke-width="2"/><text x="220" y="170" text-anchor="middle" fill="#fff" font-size="11" font-weight="700">H</text><rect x="60" y="248" width="140" height="26" rx="4" fill="#fef2f2" stroke="#fca5a5" stroke-width="1"/><text x="130" y="265" text-anchor="middle" fill="#dc2626" font-size="12" font-weight="600">Ef = 0.34 eV/atom</text></svg>
-										</div>
-										<!-- State 1 -->
-										<div class="rl-crys-state" style="position:absolute; text-align:center; opacity:0; transition:opacity 0.6s;">
-											<div style="font-weight:700; color:#f97316; font-size:0.65em; margin-bottom:2px;">Turn 1 — Partially Relaxed</div>
-											<svg viewBox="0 0 260 280" width="180" height="190"><rect x="30" y="30" width="200" height="200" fill="none" stroke="#94a3b8" stroke-width="1.5" stroke-dasharray="6,3" rx="3"/><line x1="50" y1="50" x2="130" y2="210" stroke="#64748b" stroke-width="1.5" opacity=".5"/><line x1="200" y1="50" x2="130" y2="210" stroke="#64748b" stroke-width="1.5" opacity=".5"/><line x1="50" y1="50" x2="200" y2="50" stroke="#64748b" stroke-width="1.5" opacity=".5"/><line x1="50" y1="50" x2="50" y2="170" stroke="#64748b" stroke-width="1.5" opacity=".5"/><line x1="200" y1="50" x2="200" y2="170" stroke="#64748b" stroke-width="1.5" opacity=".5"/><circle cx="50" cy="50" r="18" fill="#3b82f6" stroke="#1d4ed8" stroke-width="2"/><text x="50" y="55" text-anchor="middle" fill="#fff" font-size="13" font-weight="700">Ti</text><circle cx="200" cy="50" r="18" fill="#3b82f6" stroke="#1d4ed8" stroke-width="2"/><text x="200" y="55" text-anchor="middle" fill="#fff" font-size="13" font-weight="700">Ti</text><circle cx="130" cy="210" r="12" fill="#22c55e" stroke="#15803d" stroke-width="2"/><text x="130" y="215" text-anchor="middle" fill="#fff" font-size="11" font-weight="700">H</text><circle cx="50" cy="170" r="12" fill="#22c55e" stroke="#15803d" stroke-width="2"/><text x="50" y="175" text-anchor="middle" fill="#fff" font-size="11" font-weight="700">H</text><circle cx="200" cy="170" r="12" fill="#22c55e" stroke="#15803d" stroke-width="2"/><text x="200" y="175" text-anchor="middle" fill="#fff" font-size="11" font-weight="700">H</text><rect x="60" y="248" width="140" height="26" rx="4" fill="#fffbeb" stroke="#fcd34d" stroke-width="1"/><text x="130" y="265" text-anchor="middle" fill="#d97706" font-size="12" font-weight="600">Ef = 0.12 eV/atom</text></svg>
-										</div>
-										<!-- State 2 -->
-										<div class="rl-crys-state" style="position:absolute; text-align:center; opacity:0; transition:opacity 0.6s;">
-											<div style="font-weight:700; color:#22c55e; font-size:0.65em; margin-bottom:2px;">Turn 2 — Relaxed ✓</div>
-											<svg viewBox="0 0 260 280" width="180" height="190"><rect x="30" y="30" width="200" height="200" fill="none" stroke="#94a3b8" stroke-width="1.5" stroke-dasharray="6,3" rx="3"/><line x1="45" y1="45" x2="130" y2="200" stroke="#64748b" stroke-width="1.5" opacity=".5"/><line x1="205" y1="45" x2="130" y2="200" stroke="#64748b" stroke-width="1.5" opacity=".5"/><line x1="45" y1="45" x2="205" y2="45" stroke="#64748b" stroke-width="1.5" opacity=".5"/><line x1="45" y1="45" x2="45" y2="165" stroke="#64748b" stroke-width="1.5" opacity=".5"/><line x1="205" y1="45" x2="205" y2="165" stroke="#64748b" stroke-width="1.5" opacity=".5"/><line x1="45" y1="165" x2="205" y2="165" stroke="#64748b" stroke-width="1.5" opacity=".5"/><circle cx="45" cy="45" r="18" fill="#3b82f6" stroke="#1d4ed8" stroke-width="2"/><text x="45" y="50" text-anchor="middle" fill="#fff" font-size="13" font-weight="700">Ti</text><circle cx="205" cy="45" r="18" fill="#3b82f6" stroke="#1d4ed8" stroke-width="2"/><text x="205" y="50" text-anchor="middle" fill="#fff" font-size="13" font-weight="700">Ti</text><circle cx="130" cy="200" r="12" fill="#22c55e" stroke="#15803d" stroke-width="2"/><text x="130" y="205" text-anchor="middle" fill="#fff" font-size="11" font-weight="700">H</text><circle cx="45" cy="165" r="12" fill="#22c55e" stroke="#15803d" stroke-width="2"/><text x="45" y="170" text-anchor="middle" fill="#fff" font-size="11" font-weight="700">H</text><circle cx="205" cy="165" r="12" fill="#22c55e" stroke="#15803d" stroke-width="2"/><text x="205" y="170" text-anchor="middle" fill="#fff" font-size="11" font-weight="700">H</text><rect x="55" y="248" width="150" height="26" rx="4" fill="#f0fdf4" stroke="#86efac" stroke-width="1"/><text x="130" y="265" text-anchor="middle" fill="#16a34a" font-size="12" font-weight="600">Ef = 0.025 eV/atom ✓</text></svg>
-										</div>
-									</div>
-								</a>
-								<h3><a href="GRPO_For_Materials/blog_post.html">RL Crystal Relaxation</a></h3>
-								<p>Blog post on the GRPO environment for crystal relaxation with CHGNet.</p>
-								<ul class="actions">
-									<li><a class="button small" href="GRPO_For_Materials/blog_post.html" target="_blank" rel="noopener noreferrer">Blog post</a></li>
-								</ul>
-							</article>
-						</div>
-								<div class="col-6 col-12-small">
-							<article class="box style2">
-								<a href="https://link.springer.com/article/10.1186/s13321-023-00765-1" class="image featured" target="_blank" rel="noopener noreferrer" style="position:relative; display:block; overflow:hidden; height:220px; background:#f8fafc;">
-									<iframe src="bloom_filter_animation.html" style="position:absolute; top:0; left:0; width:200%; height:200%; border:none; pointer-events:none; transform:scale(0.5); transform-origin:top left;" title="Bloom Filter Animation" loading="lazy"></iframe>
-								</a>
-								<h3><a href="https://link.springer.com/article/10.1186/s13321-023-00765-1" target="_blank" rel="noopener noreferrer">Bloom Filters for Molecules</a></h3>
-								<p>Compact molecular representations for fast screening.</p>
-								<ul class="actions">
-									<li><a class="button small" href="https://link.springer.com/article/10.1186/s13321-023-00765-1" target="_blank" rel="noopener noreferrer">Paper</a></li>
-								</ul>
-							</article>
-						</div>
-								<div class="col-6 col-12-small">
-							<article class="box style2">
-								<a href="https://arxiv.org/abs/2305.10379" class="image featured" target="_blank" rel="noopener noreferrer"><img src="images/TOC_QBC_SR.png" alt="Active learning with constraints preview" /></a>
-								<h3><a href="https://arxiv.org/abs/2305.10379" target="_blank" rel="noopener noreferrer">Active Learning with Constraints in Symbolic Regression</a></h3>
-								<p>Constraint-aware discovery of interpretable equations.</p>
-								<ul class="actions">
-									<li><a class="button small" href="https://arxiv.org/abs/2305.10379" target="_blank" rel="noopener noreferrer">Paper</a></li>
-									<li><a class="button small" href="https://huggingface.co/spaces/4everStudent/SRDemo" target="_blank" rel="noopener noreferrer">Demo</a></li>
-								</ul>
-							</article>
-						</div>
-								<div class="col-6 col-12-small">
-							<article class="box style2">
-								<a href="https://chemrxiv.org/doi/full/10.26434/chemrxiv.15001652/v1" class="image featured" target="_blank" rel="noopener noreferrer"><img src="images/TOC_QDICL.png" alt="Bayesian optimization with LLMs preview" /></a>
-								<h3><a href="https://chemrxiv.org/doi/full/10.26434/chemrxiv.15001652/v1" target="_blank" rel="noopener noreferrer">Bayesian Optimization with LLMs for Materials</a></h3>
-								<p>LLM-guided acquisition for materials search.</p>
-								<ul class="actions">
-									<li><a class="button small" href="https://chemrxiv.org/doi/full/10.26434/chemrxiv.15001652/v1" target="_blank" rel="noopener noreferrer">Paper</a></li>
-								</ul>
-							</article>
-						</div>
-								<div class="col-6 col-12-small">
-							<article class="box style2">
-								<a href="https://iopscience.iop.org/article/10.1088/2632-2153/ae4b07" class="image featured" target="_blank" rel="noopener noreferrer"><img src="images/MDCrow_TOC.png" alt="MDCrow — automating molecular dynamics workflows with LLMs" /></a>
-								<h3><a href="https://iopscience.iop.org/article/10.1088/2632-2153/ae4b07" target="_blank" rel="noopener noreferrer">MDCrow: Automating MD Workflows with LLMs</a></h3>
-								<p>An LLM agent with 40+ expert-designed tools for automating molecular dynamics simulations, analysis, and multi-step protein workflows.</p>
-								<ul class="actions">
-									<li><a class="button small" href="https://iopscience.iop.org/article/10.1088/2632-2153/ae4b07" target="_blank" rel="noopener noreferrer">Paper</a></li>
-								</ul>
-							</article>
-						</div>
-					</div>
-						</div>
-					</div>
+            <div class="grid md:grid-cols-2 gap-x-24 gap-y-20">
 
-				</div>
-			</article>
+                <div class="group">
+                    <h4 class="text-[10px] font-bold uppercase tracking-widest text-zinc-300 mb-6 border-b border-subtle pb-2 w-fit">Journal of Cheminformatics</h4>
+                    <a href="https://link.springer.com/article/10.1186/s13321-023-00765-1" target="_blank" rel="noopener noreferrer">
+                        <h3 class="serif text-3xl mb-6 leading-snug group-hover:text-zinc-500 transition-colors cursor-pointer">Bloom Filters for Molecules: Compact Representations for Screening</h3>
+                    </a>
+                    <p class="text-zinc-500 font-light text-base leading-relaxed">Efficient molecular fingerprints designed for massive-scale virtual screening in high-throughput drug discovery pipelines.</p>
+                    <a href="https://link.springer.com/article/10.1186/s13321-023-00765-1" target="_blank" rel="noopener noreferrer" class="mt-4 inline-flex items-center gap-2 text-[10px] font-medium uppercase tracking-widest text-zinc-400 hover:text-black transition-colors">
+                        Paper <span class="w-4 h-[1px] bg-current"></span>
+                    </a>
+                </div>
 
-		<!-- Contact -->
-			<article id="contact" class="wrapper style4">
-				<div class="container medium">
-					<header>
-						<h2>Contact</h2>
-						<p>Reach out on GitHub for collaborations or questions.</p>
-					</header>
-					<div class="row">
-						<div class="col-12">
-							<ul class="actions">
-								<li><a class="button" href="https://github.com/Jgmedina95">GitHub Profile</a></li>
-							</ul>
-						</div>
-					</div>
-					<footer>
-						<ul id="copyright">
-							<li>&copy; Jorge Medina. All rights reserved.</li><li>Design: <a href="http://html5up.net">HTML5 UP</a></li>
-						</ul>
-					</footer>
-				</div>
-			</article>
+                <div class="group">
+                    <h4 class="text-[10px] font-bold uppercase tracking-widest text-zinc-300 mb-6 border-b border-subtle pb-2 w-fit">Nature Machine Intelligence</h4>
+                    <a href="https://iopscience.iop.org/article/10.1088/2632-2153/ae4b07" target="_blank" rel="noopener noreferrer">
+                        <h3 class="serif text-3xl mb-6 leading-snug group-hover:text-zinc-500 transition-colors cursor-pointer">MDCrow: Automating Molecular Dynamics Workflows with LLMs</h3>
+                    </a>
+                    <p class="text-zinc-500 font-light text-base leading-relaxed">A specialized agentic framework capable of executing complex protein analysis using 40+ expert-designed tools.</p>
+                    <a href="https://iopscience.iop.org/article/10.1088/2632-2153/ae4b07" target="_blank" rel="noopener noreferrer" class="mt-4 inline-flex items-center gap-2 text-[10px] font-medium uppercase tracking-widest text-zinc-400 hover:text-black transition-colors">
+                        Paper <span class="w-4 h-[1px] bg-current"></span>
+                    </a>
+                </div>
 
-		<!-- Scripts -->
-			<script src="assets/js/jquery.min.js"></script>
-			<script src="assets/js/jquery.scrolly.min.js"></script>
-			<script src="assets/js/browser.min.js"></script>
-			<script src="assets/js/breakpoints.min.js"></script>
-			<script src="assets/js/util.js"></script>
-			<script src="assets/js/main.js"></script>
-			<script>
-				(function () {
-					var toggles = document.querySelectorAll('.ml-projects-toggle');
-					if (!toggles.length) {
-						return;
-					}
-					toggles.forEach(function (toggle) {
-						toggle.addEventListener('click', function () {
-							var card = toggle.closest('.ml-projects-card');
-							if (!card) {
-								return;
-							}
-							var isOpen = card.classList.toggle('is-open');
-							toggle.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
-						});
-					});
-				})();
-			</script>
-			<script>
-				(function () {
-					var states = document.querySelectorAll('.rl-crys-state');
-					if (!states.length) return;
-					var step = 0;
-					setInterval(function () {
-						step = (step + 1) % states.length;
-						states.forEach(function (el, i) {
-							el.style.opacity = i === step ? '1' : '0';
-						});
-					}, 2000);
-				})();
-			</script>
+                <div class="group">
+                    <h4 class="text-[10px] font-bold uppercase tracking-widest text-zinc-300 mb-6 border-b border-subtle pb-2 w-fit">ArXiv</h4>
+                    <a href="https://arxiv.org/abs/2305.10379" target="_blank" rel="noopener noreferrer">
+                        <h3 class="serif text-3xl mb-6 leading-snug group-hover:text-zinc-500 transition-colors cursor-pointer">Active Learning with Constraints in Symbolic Regression</h3>
+                    </a>
+                    <p class="text-zinc-500 font-light text-base leading-relaxed">Discovery of interpretable physical laws through constraint-aware active learning cycles and symbolic optimization.</p>
+                    <div class="mt-4 flex items-center gap-4">
+                        <a href="https://arxiv.org/abs/2305.10379" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-2 text-[10px] font-medium uppercase tracking-widest text-zinc-400 hover:text-black transition-colors">
+                            Paper <span class="w-4 h-[1px] bg-current"></span>
+                        </a>
+                        <a href="https://huggingface.co/spaces/4everStudent/SRDemo" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-2 text-[10px] font-medium uppercase tracking-widest text-zinc-400 hover:text-black transition-colors">
+                            Demo <span class="w-4 h-[1px] bg-current"></span>
+                        </a>
+                    </div>
+                </div>
 
-	</body>
+                <div class="group">
+                    <h4 class="text-[10px] font-bold uppercase tracking-widest text-zinc-300 mb-6 border-b border-subtle pb-2 w-fit">ChemRxiv</h4>
+                    <a href="https://chemrxiv.org/doi/full/10.26434/chemrxiv.15001652/v1" target="_blank" rel="noopener noreferrer">
+                        <h3 class="serif text-3xl mb-6 leading-snug group-hover:text-zinc-500 transition-colors cursor-pointer">Bayesian Optimization with LLMs for Materials Search</h3>
+                    </a>
+                    <p class="text-zinc-500 font-light text-base leading-relaxed">Utilizing LLM-guided acquisition functions to efficiently navigate high-dimensional material property spaces.</p>
+                    <a href="https://chemrxiv.org/doi/full/10.26434/chemrxiv.15001652/v1" target="_blank" rel="noopener noreferrer" class="mt-4 inline-flex items-center gap-2 text-[10px] font-medium uppercase tracking-widest text-zinc-400 hover:text-black transition-colors">
+                        Paper <span class="w-4 h-[1px] bg-current"></span>
+                    </a>
+                </div>
+
+            </div>
+        </section>
+
+        <!-- Contact -->
+        <section id="contact" class="border-t border-subtle text-center py-48">
+            <div class="max-w-2xl mx-auto">
+                <h2 class="serif text-5xl md:text-6xl mb-12 italic">Let's synthesize something new.</h2>
+                <p class="text-zinc-400 mb-16 text-lg font-light leading-relaxed">Open to collaborations at the intersection of agentic workflows and molecular modeling.</p>
+                <a href="https://github.com/Jgmedina95" target="_blank" class="serif text-3xl md:text-4xl underline decoration-zinc-200 underline-offset-[12px] hover:decoration-black transition-all duration-300">GitHub — Jgmedina95</a>
+            </div>
+        </section>
+
+    </main>
+
+    <footer class="max-w-6xl mx-auto px-8 py-16 border-t border-subtle flex flex-col md:flex-row justify-between items-center gap-8">
+        <p class="text-[10px] font-medium tracking-[0.2em] text-zinc-400 uppercase">© 2026 Jorge Medina. All rights reserved.</p>
+        <div class="flex gap-12 text-[10px] font-semibold tracking-[0.2em] uppercase text-zinc-400">
+            <a href="https://github.com/Jgmedina95" target="_blank" class="hover:text-black transition-colors">GitHub</a>
+            <a href="#research" class="hover:text-black transition-colors">Scholar</a>
+        </div>
+    </footer>
+
+    <script>
+        // Crystal relaxation animation
+        (function () {
+            var states = document.querySelectorAll('.rl-crys-state-sm');
+            if (!states.length) return;
+            var step = 0;
+            setInterval(function () {
+                step = (step + 1) % states.length;
+                states.forEach(function (el, i) {
+                    el.style.opacity = i === step ? '1' : '0';
+                });
+            }, 2000);
+        })();
+    </script>
+
+</body>
 </html>
