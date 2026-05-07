@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Jorge Medina | Research & Systems</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500&family=Playfair+Display:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #fcfcfc;
+            color: #1a1a1a;
+            scroll-behavior: smooth;
+        }
+        .serif {
+            font-family: 'Playfair Display', serif;
+        }
+        /* The "Ghost" Hover Effect */
+        .project-row:hover .project-image {
+            opacity: 1;
+            transform: translateX(0) scale(1);
+        }
+        .project-image {
+            opacity: 0;
+            transform: translateX(20px) scale(0.95);
+            transition: all 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+            pointer-events: none;
+        }
+        .nav-link {
+            position: relative;
+        }
+        .nav-link::after {
+            content: '';
+            position: absolute;
+            width: 0;
+            height: 1px;
+            bottom: -2px;
+            left: 0;
+            background-color: #1a1a1a;
+            transition: width 0.3s ease;
+        }
+        .nav-link:hover::after {
+            width: 100%;
+        }
+        section {
+            padding: 120px 0;
+        }
+        .border-subtle {
+            border-color: #efefef;
+        }
+        .text-balanced {
+            text-wrap: balance;
+        }
+    </style>
+</head>
+<body class="selection:bg-zinc-200">
+
+    <!-- Navigation -->
+    <nav class="fixed top-0 w-full z-50 bg-white/80 backdrop-blur-md border-b border-subtle">
+        <div class="max-w-6xl mx-auto px-8 h-20 flex items-center justify-between">
+            <a href="#" class="serif text-2xl font-bold tracking-tight">JM</a>
+            <div class="flex gap-10 text-[10px] font-semibold tracking-[0.2em] uppercase">
+                <a href="#about" class="nav-link">About</a>
+                <a href="#portfolio" class="nav-link">Portfolio</a>
+                <a href="#research" class="nav-link">Research</a>
+                <a href="#contact" class="nav-link text-zinc-400 hover:text-black">Contact</a>
+            </div>
+        </div>
+    </nav>
+
+    <main class="max-w-6xl mx-auto px-8">
+        
+        <!-- Hero Section -->
+        <section id="about" class="pt-52 pb-40">
+            <div class="max-w-4xl">
+                <h1 class="serif text-6xl md:text-8xl mb-12 leading-[1.1] tracking-tight text-balanced">
+                    Jorge Medina <br>
+                    <span class="italic text-zinc-400">Research & Systems</span>
+                </h1>
+                <p class="text-2xl text-zinc-500 leading-relaxed font-light max-w-2xl">
+                    Designing AI systems for scientific discovery. From language models to simulation, making machines better at reasoning about the world.
+                </p>
+                <div class="mt-16 flex items-center gap-10">
+                    <a href="#portfolio" class="group flex items-center gap-3 text-sm font-medium">
+                        View Portfolio 
+                        <span class="w-8 h-[1px] bg-black group-hover:w-12 transition-all"></span>
+                    </a>
+                    <a href="https://github.com/Jgmedina95" target="_blank" class="text-sm font-medium text-zinc-400 hover:text-black transition-colors">GitHub</a>
+                </div>
+            </div>
+        </section>
+
+        <!-- Portfolio Section -->
+        <section id="portfolio" class="border-t border-subtle">
+            <div class="flex flex-col md:flex-row justify-between mb-24 gap-8">
+                <h2 class="serif text-4xl italic">Selected Work</h2>
+                <div class="max-w-sm">
+                    <p class="text-sm text-zinc-400 leading-relaxed uppercase tracking-wider">
+                        01 — ARCHITECTURES<br>
+                        02 — SIMULATIONS<br>
+                        03 — INTERPRETABLE AI
+                    </p>
+                </div>
+            </div>
+
+            <div class="space-y-0">
+                <!-- Project Item -->
+                <a href="https://github.com/Jgmedina95/AgentGroupChat" target="_blank" class="project-row block group relative py-16 border-b border-subtle">
+                    <div class="flex items-center justify-between gap-12">
+                        <div class="flex-1">
+                            <span class="text-[10px] font-mono text-zinc-400 mb-4 block tracking-widest uppercase">Substrate / Architecture</span>
+                            <h3 class="serif text-4xl md:text-6xl group-hover:italic transition-all duration-500">AgentGroupChat</h3>
+                            <p class="mt-6 text-zinc-500 max-w-2xl text-lg font-light leading-relaxed">A shared chat substrate for humans and LLM agents with granular permissions and real-time synchronization.</p>
+                        </div>
+                        <div class="hidden lg:block w-72 h-48 bg-zinc-100 overflow-hidden rounded-sm project-image grayscale hover:grayscale-0">
+                             <div class="w-full h-full flex items-center justify-center text-zinc-300 text-[10px] uppercase tracking-[0.3em] font-bold">System_Architecture</div>
+                        </div>
+                    </div>
+                </a>
+
+                <!-- Project Item -->
+                <a href="#" class="project-row block group relative py-16 border-b border-subtle">
+                    <div class="flex items-center justify-between gap-12">
+                        <div class="flex-1">
+                            <span class="text-[10px] font-mono text-zinc-400 mb-4 block tracking-widest uppercase">Simulation / AI</span>
+                            <h3 class="serif text-4xl md:text-6xl group-hover:italic transition-all duration-500">Drug Discovery Pipeline</h3>
+                            <p class="mt-6 text-zinc-500 max-w-2xl text-lg font-light leading-relaxed">Fully self-contained environments for LLM agents to run protein-ligand simulations via Bayesian optimization.</p>
+                        </div>
+                        <div class="hidden lg:block w-72 h-48 bg-zinc-100 overflow-hidden rounded-sm project-image grayscale hover:grayscale-0">
+                             <div class="w-full h-full flex items-center justify-center text-zinc-300 text-[10px] uppercase tracking-[0.3em] font-bold">Molecular_Dynamics</div>
+                        </div>
+                    </div>
+                </a>
+
+                <!-- Project Item -->
+                <a href="#" class="project-row block group relative py-16 border-b border-subtle">
+                    <div class="flex items-center justify-between gap-12">
+                        <div class="flex-1">
+                            <span class="text-[10px] font-mono text-zinc-400 mb-4 block tracking-widest uppercase">Reasoning / Graphs</span>
+                            <h3 class="serif text-4xl md:text-6xl group-hover:italic transition-all duration-500">Dependency Graphs</h3>
+                            <p class="mt-6 text-zinc-500 max-w-2xl text-lg font-light leading-relaxed">Normalizing tool schemas into executable dependency graphs, enabling agents to reason about complex task sequences.</p>
+                        </div>
+                        <div class="hidden lg:block w-72 h-48 bg-zinc-100 overflow-hidden rounded-sm project-image grayscale hover:grayscale-0">
+                             <div class="w-full h-full flex items-center justify-center text-zinc-300 text-[10px] uppercase tracking-[0.3em] font-bold">Logic_Graph</div>
+                        </div>
+                    </div>
+                </a>
+            </div>
+        </section>
+
+        <!-- Research Section -->
+        <section id="research" class="border-t border-subtle">
+            <div class="mb-24">
+                <h2 class="serif text-4xl italic mb-4">Selected Publications</h2>
+                <p class="text-zinc-400 text-sm tracking-wide uppercase">Advancing the intersection of Chemistry and Intelligence</p>
+            </div>
+            
+            <div class="grid md:grid-cols-2 gap-x-24 gap-y-20">
+                <div class="group">
+                    <h4 class="text-[10px] font-bold uppercase tracking-widest text-zinc-300 mb-6 border-b border-subtle pb-2 w-fit">Chemical Science</h4>
+                    <h3 class="serif text-3xl mb-6 leading-snug group-hover:text-zinc-500 transition-colors cursor-pointer">Bloom Filters for Molecules: Compact Representations for Screening</h3>
+                    <p class="text-zinc-500 font-light text-base leading-relaxed">Efficient molecular fingerprints designed for massive-scale virtual screening in high-throughput drug discovery pipelines.</p>
+                </div>
+
+                <div class="group">
+                    <h4 class="text-[10px] font-bold uppercase tracking-widest text-zinc-300 mb-6 border-b border-subtle pb-2 w-fit">Nature Machine Intelligence</h4>
+                    <h3 class="serif text-3xl mb-6 leading-snug group-hover:text-zinc-500 transition-colors cursor-pointer">MDCrow: Automating Molecular Dynamics Workflows with LLMs</h3>
+                    <p class="text-zinc-500 font-light text-base leading-relaxed">A specialized agentic framework capable of executing complex protein analysis using 40+ expert-designed tools.</p>
+                </div>
+
+                <div class="group">
+                    <h4 class="text-[10px] font-bold uppercase tracking-widest text-zinc-300 mb-6 border-b border-subtle pb-2 w-fit">ArXiv</h4>
+                    <h3 class="serif text-3xl mb-6 leading-snug group-hover:text-zinc-500 transition-colors cursor-pointer">Active Learning with Constraints in Symbolic Regression</h3>
+                    <p class="text-zinc-500 font-light text-base leading-relaxed">Discovery of interpretable physical laws through constraint-aware active learning cycles and symbolic optimization.</p>
+                </div>
+
+                <div class="group">
+                    <h4 class="text-[10px] font-bold uppercase tracking-widest text-zinc-300 mb-6 border-b border-subtle pb-2 w-fit">ChemRxiv</h4>
+                    <h3 class="serif text-3xl mb-6 leading-snug group-hover:text-zinc-500 transition-colors cursor-pointer">Bayesian Optimization with LLMs for Materials Search</h3>
+                    <p class="text-zinc-500 font-light text-base leading-relaxed">Utilizing LLM-guided acquisition functions to efficiently navigate high-dimensional material property spaces.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Contact -->
+        <section id="contact" class="border-t border-subtle text-center py-48">
+            <div class="max-w-2xl mx-auto">
+                <h2 class="serif text-5xl md:text-6xl mb-12 italic">Let's synthesize something new.</h2>
+                <p class="text-zinc-400 mb-16 text-lg font-light leading-relaxed">Open to collaborations at the intersection of agentic workflows and molecular modeling.</p>
+                <a href="mailto:jgmedina95@github" class="serif text-3xl md:text-4xl underline decoration-zinc-200 underline-offset-[12px] hover:decoration-black transition-all duration-300">jgmedina95@github</a>
+            </div>
+        </section>
+
+    </main>
+
+    <footer class="max-w-6xl mx-auto px-8 py-16 border-t border-subtle flex flex-col md:flex-row justify-between items-center gap-8">
+        <p class="text-[10px] font-medium tracking-[0.2em] text-zinc-400 uppercase">© 2024 Jorge Medina. All rights reserved.</p>
+        <div class="flex gap-12 text-[10px] font-semibold tracking-[0.2em] uppercase text-zinc-400">
+            <a href="#" class="hover:text-black transition-colors">LinkedIn</a>
+            <a href="https://github.com/Jgmedina95" target="_blank" class="hover:text-black transition-colors">GitHub</a>
+            <a href="#" class="hover:text-black transition-colors">Scholar</a>
+        </div>
+    </footer>
+
+</body>
+</html>

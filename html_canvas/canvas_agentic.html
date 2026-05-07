@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Jorge Medina | Agentic Systems</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;700&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --glow-color: rgba(34, 211, 238, 0.4); /* Cyan-400 */
+        }
+        body {
+            font-family: 'Space Grotesk', sans-serif;
+            background-color: #050505;
+            color: #e2e8f0;
+            overflow-x: hidden;
+        }
+        .mono { font-family: 'JetBrains Mono', monospace; }
+        
+        #canvas-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+            opacity: 0.4;
+        }
+
+        .glass-card {
+            background: rgba(15, 23, 42, 0.6);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        .glass-card:hover {
+            border-color: var(--glow-color);
+            box-shadow: 0 0 30px var(--glow-color);
+            transform: translateY(-5px);
+        }
+
+        .glow-text {
+            text-shadow: 0 0 10px var(--glow-color);
+        }
+
+        .section-stagger {
+            opacity: 0;
+            transform: translateY(20px);
+            transition: all 0.8s ease-out;
+        }
+
+        .section-stagger.visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        .node-tag {
+            font-size: 0.65rem;
+            padding: 2px 8px;
+            border-radius: 4px;
+            background: rgba(34, 211, 238, 0.1);
+            color: #22d3ee;
+            border: 1px solid rgba(34, 211, 238, 0.2);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="canvas-container"></div>
+
+    <!-- Navigation -->
+    <nav class="fixed top-0 w-full z-50 px-6 py-6 flex justify-between items-center pointer-events-none">
+        <div class="pointer-events-auto">
+            <span class="mono font-bold text-xl glow-text text-cyan-400 tracking-tighter">AGENT_JM_v1.0</span>
+        </div>
+        <div class="hidden md:flex gap-8 pointer-events-auto mono text-xs uppercase tracking-widest text-slate-400">
+            <a href="#projects" class="hover:text-cyan-400 transition-colors">/projects</a>
+            <a href="#research" class="hover:text-cyan-400 transition-colors">/research</a>
+            <a href="#contact" class="hover:text-cyan-400 transition-colors">/contact</a>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="relative z-10 max-w-6xl mx-auto px-6">
+        
+        <!-- Hero -->
+        <section class="min-h-screen flex flex-col justify-center pt-20">
+            <div class="max-w-3xl">
+                <div class="mono text-cyan-400 text-sm mb-4 tracking-widest uppercase">Initializing Portfolio Substrate...</div>
+                <h1 class="text-6xl md:text-8xl font-bold mb-8 tracking-tighter">
+                    Jorge <span class="text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-blue-500">Medina</span>
+                </h1>
+                <p class="text-xl md:text-2xl text-slate-400 font-light leading-relaxed mb-10">
+                    Architecting <span class="text-white italic">autonomous research systems</span>. Specializing in tool-use agents, molecular dynamics automation, and crystal relaxation workflows.
+                </p>
+                <div class="flex flex-wrap gap-4">
+                    <a href="#projects" class="px-8 py-3 bg-white text-black font-bold rounded-sm hover:bg-cyan-400 transition-colors mono text-sm">EXPLORE_SYSTEMS</a>
+                    <a href="https://github.com/Jgmedina95" class="px-8 py-3 border border-slate-700 font-bold rounded-sm hover:border-cyan-400 transition-all mono text-sm">GITHUB_REMOTE</a>
+                </div>
+            </div>
+        </section>
+
+        <!-- Projects Grid -->
+        <section id="projects" class="py-24 section-stagger">
+            <h2 class="mono text-sm text-cyan-400 mb-12 uppercase tracking-widest border-b border-slate-800 pb-4">01 // Agentic_Deployments</h2>
+            
+            <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+                
+                <!-- Project 1 -->
+                <div class="glass-card p-8 flex flex-col h-full">
+                    <div class="flex justify-between items-start mb-6">
+                        <div class="node-tag">Substrate</div>
+                        <div class="text-slate-600 mono text-[10px]">0x01</div>
+                    </div>
+                    <h3 class="text-2xl font-bold mb-4">AgentGroupChat</h3>
+                    <p class="text-slate-400 text-sm flex-grow mb-6">
+                        Multi-agent shared chat substrate for human-LLM collaboration with granular permissions and live websocket synchronization.
+                    </p>
+                    <div class="mono text-[10px] text-cyan-500 group-hover:underline">STABLE_RELEASE -></div>
+                </div>
+
+                <!-- Project 2 -->
+                <div class="glass-card p-8 flex flex-col h-full">
+                    <div class="flex justify-between items-start mb-6">
+                        <div class="node-tag">Molecular</div>
+                        <div class="text-slate-600 mono text-[10px]">0x02</div>
+                    </div>
+                    <h3 class="text-2xl font-bold mb-4">Drug Discovery Pipeline</h3>
+                    <p class="text-slate-400 text-sm flex-grow mb-6">
+                        Autonomous environment for protein-ligand simulations iterated via Bayesian optimization and verifiable GRPO training.
+                    </p>
+                    <div class="mono text-[10px] text-cyan-500">BETA_PHASE -></div>
+                </div>
+
+                <!-- Project 3 -->
+                <div class="glass-card p-8 flex flex-col h-full">
+                    <div class="flex justify-between items-start mb-6">
+                        <div class="node-tag">Logic</div>
+                        <div class="text-slate-600 mono text-[10px]">0x03</div>
+                    </div>
+                    <h3 class="text-2xl font-bold mb-4">Dependency Graphs</h3>
+                    <p class="text-slate-400 text-sm flex-grow mb-6">
+                        Graph-based reasoning for tool-using agents, normalizing raw schemas into executable dependency orders.
+                    </p>
+                    <div class="mono text-[10px] text-cyan-500">LOG_ARCHIVE -></div>
+                </div>
+
+            </div>
+        </section>
+
+        <!-- Research List -->
+        <section id="research" class="py-24 section-stagger">
+            <h2 class="mono text-sm text-cyan-400 mb-12 uppercase tracking-widest border-b border-slate-800 pb-4">02 // Peer_Reviewed_Nodes</h2>
+            
+            <div class="space-y-4">
+                <!-- Research Item -->
+                <div class="flex flex-col md:flex-row md:items-center justify-between p-6 border border-slate-800 hover:bg-slate-900/50 transition-colors group">
+                    <div class="max-w-2xl">
+                        <div class="flex items-center gap-3 mb-2">
+                            <span class="mono text-[10px] text-slate-500">2024</span>
+                            <span class="text-[10px] bg-slate-800 text-slate-300 px-2 py-0.5 rounded">Nature Machine Intelligence</span>
+                        </div>
+                        <h3 class="text-xl font-bold group-hover:text-cyan-400 transition-colors">MDCrow: Automating Molecular Dynamics with LLMs</h3>
+                    </div>
+                    <a href="#" class="mt-4 md:mt-0 px-4 py-2 border border-slate-700 text-xs mono hover:bg-white hover:text-black transition-all">READ_PDF</a>
+                </div>
+
+                <div class="flex flex-col md:flex-row md:items-center justify-between p-6 border border-slate-800 hover:bg-slate-900/50 transition-colors group">
+                    <div class="max-w-2xl">
+                        <div class="flex items-center gap-3 mb-2">
+                            <span class="mono text-[10px] text-slate-500">2023</span>
+                            <span class="text-[10px] bg-slate-800 text-slate-300 px-2 py-0.5 rounded">Chemical Science</span>
+                        </div>
+                        <h3 class="text-xl font-bold group-hover:text-cyan-400 transition-colors">Bloom Filters for Molecules: Compact Representations</h3>
+                    </div>
+                    <a href="#" class="mt-4 md:mt-0 px-4 py-2 border border-slate-700 text-xs mono hover:bg-white hover:text-black transition-all">READ_PDF</a>
+                </div>
+            </div>
+        </section>
+
+        <!-- Contact / Terminal -->
+        <section id="contact" class="py-32 section-stagger">
+            <div class="bg-slate-900 border border-slate-800 rounded-sm p-8 max-w-2xl mx-auto">
+                <div class="flex gap-2 mb-6">
+                    <div class="w-3 h-3 rounded-full bg-red-500/50"></div>
+                    <div class="w-3 h-3 rounded-full bg-yellow-500/50"></div>
+                    <div class="w-3 h-3 rounded-full bg-green-500/50"></div>
+                </div>
+                <div class="mono text-sm">
+                    <div class="text-slate-500 mb-2">jmedina@research:~$ <span class="text-white">get contact_info</span></div>
+                    <div class="text-cyan-400 mb-4 ml-4">
+                        [GITHUB] >> <a href="https://github.com/Jgmedina95" class="hover:underline">github.com/jgmedina95</a><br>
+                        [EMAIL] >> jgmedina95@research.io
+                    </div>
+                    <div class="text-slate-500">jmedina@research:~$ <span class="text-white animate-pulse">_</span></div>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <footer class="py-12 border-t border-slate-900 text-center mono text-[10px] text-slate-600">
+        SYSTEM_PORTFOLIO_V1_2024 // ALL_RIGHTS_RESERVED
+    </footer>
+
+    <script>
+        // Three.js Background Graph Logic
+        let scene, camera, renderer, points, starGeo;
+        
+        function initBackground() {
+            scene = new THREE.Scene();
+            camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 1, 1000);
+            camera.position.z = 1;
+            camera.rotation.x = Math.PI/2;
+
+            renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            document.getElementById('canvas-container').appendChild(renderer.domElement);
+
+            starGeo = new THREE.Geometry();
+            for(let i=0; i<600; i++) {
+                let star = new THREE.Vector3(
+                    Math.random() * 600 - 300,
+                    Math.random() * 600 - 300,
+                    Math.random() * 600 - 300
+                );
+                star.velocity = 0;
+                star.acceleration = 0.02;
+                starGeo.vertices.push(star);
+            }
+
+            let sprite = new THREE.TextureLoader().load('https://raw.githubusercontent.com/mrdoob/three.js/master/examples/textures/sprites/disc.png');
+            let starMaterial = new THREE.PointsMaterial({
+                color: 0x22d3ee,
+                size: 0.7,
+                map: sprite,
+                transparent: true
+            });
+
+            points = new THREE.Points(starGeo, starMaterial);
+            scene.add(points);
+
+            animate();
+        }
+
+        function animate() {
+            starGeo.vertices.forEach(p => {
+                p.velocity += p.acceleration;
+                p.y -= p.velocity;
+                
+                if (p.y < -200) {
+                    p.y = 200;
+                    p.velocity = 0;
+                }
+            });
+            starGeo.verticesNeedUpdate = true;
+            points.rotation.y += 0.002;
+            
+            renderer.render(scene, camera);
+            requestAnimationFrame(animate);
+        }
+
+        // Handle Resize
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+
+        // Intersection Observer for Scroll Animations
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.classList.add('visible');
+                }
+            });
+        }, { threshold: 0.1 });
+
+        document.querySelectorAll('.section-stagger').forEach(section => {
+            observer.observe(section);
+        });
+
+        window.onload = initBackground;
+    </script>
+</body>
+</html>

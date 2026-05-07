@@ -1192,7 +1192,7 @@ reward = 0.15 if composition_matches else 0.0</code></pre>
                         <p class="text-sm">The environment originally used both a force rubric and a formation energy rubric to check validity and stability. Both were intended to provide complementary signals about why generation was failing, thereby improving training. In practice, performance never improved when both were active. My hypothesis is that including both rubrics increased reward variance to the point that it was harder for the model to get gradient updates in the right direction—the signals partially cancelled rather than reinforced.</p>
                     </div>
                     <div>
-                        <h4 class="font-bold text-red-800 dark:text-red-300 mb-1">3. Multi-turn feedback is a re-roll signal, not a repair signal</h4>
+                        <h4 class="font-bold text-red-800 dark:text-red-300 mb-1">3. Multi-turn feedback can be a re-roll signal, not a repair signal</h4>
                         <p class="text-sm">In multi-turn rollouts, I expected the model to use feedback from a failed first attempt to diagnose and correct structural deficiencies. Across 37 first-turn failures from the 30B run, there were <strong>zero physical recoveries</strong>—no corrections to formation energy, forces, or bond lengths. Seven cases showed syntactic recoveries (fixing a malformed CIF tag), but the model treated scalar feedback like "Formation energy is too high" as a cue to re-roll rather than to diagnose. It rephrases its chain-of-thought reasoning and outputs a near-identical structure with minor random perturbations. The model can repair a broken file; it cannot repair a bad structure.</p>
                     </div>
                 </div>
