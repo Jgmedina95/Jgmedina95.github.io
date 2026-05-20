@@ -1,0 +1,1296 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Crystal Relaxation: From MultiTurnEnv to RLM</title>
+  <style>
+    :root {
+      --bg: #f5efe4;
+      --paper: rgba(255, 251, 245, 0.82);
+      --paper-strong: rgba(255, 253, 250, 0.92);
+      --ink: #17171d;
+      --muted: #5f5c67;
+      --line: rgba(23, 23, 29, 0.12);
+      --teal: #0f5e63;
+      --rust: #b34f2f;
+      --gold: #a9872d;
+      --shadow: 0 24px 60px rgba(38, 28, 18, 0.12);
+      --radius: 28px;
+      --serif: "Iowan Old Style", "Palatino Linotype", "Book Antiqua", Georgia, serif;
+      --sans: "Avenir Next", "Segoe UI", "Helvetica Neue", sans-serif;
+      --mono: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html {
+      scroll-behavior: smooth;
+    }
+
+    body {
+      margin: 0;
+      color: var(--ink);
+      font-family: var(--sans);
+      background:
+        radial-gradient(circle at top left, rgba(15, 94, 99, 0.14), transparent 34%),
+        radial-gradient(circle at top right, rgba(179, 79, 47, 0.14), transparent 28%),
+        linear-gradient(180deg, #fbf8f2 0%, #efe4d6 58%, #f4ede2 100%);
+    }
+
+    body::before {
+      content: "";
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      background:
+        linear-gradient(90deg, transparent 0, transparent calc(100% - 1px), rgba(23, 23, 29, 0.03) calc(100% - 1px)),
+        linear-gradient(transparent 0, transparent calc(100% - 1px), rgba(23, 23, 29, 0.02) calc(100% - 1px));
+      background-size: 120px 120px;
+      mask-image: linear-gradient(180deg, rgba(0, 0, 0, 0.28), transparent 80%);
+    }
+
+    a {
+      color: inherit;
+    }
+
+    .page {
+      width: min(1120px, calc(100% - 32px));
+      margin: 0 auto;
+      padding: 34px 0 72px;
+      position: relative;
+      z-index: 1;
+    }
+
+    .hero {
+      display: grid;
+      grid-template-columns: minmax(0, 1.3fr) minmax(280px, 0.8fr);
+      gap: 24px;
+      align-items: stretch;
+    }
+
+    .panel {
+      background: var(--paper);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(14px);
+      overflow: hidden;
+    }
+
+    .hero-copy {
+      padding: 34px;
+      position: relative;
+      min-height: 460px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+
+    .hero-copy::after {
+      content: "";
+      position: absolute;
+      right: -80px;
+      bottom: -80px;
+      width: 260px;
+      height: 260px;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(179, 79, 47, 0.14) 0%, rgba(179, 79, 47, 0) 68%);
+    }
+
+    .eyebrow {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      width: fit-content;
+      padding: 10px 14px;
+      border-radius: 999px;
+      border: 1px solid rgba(15, 94, 99, 0.16);
+      background: rgba(15, 94, 99, 0.07);
+      font-size: 0.78rem;
+      font-weight: 700;
+      letter-spacing: 0.11em;
+      text-transform: uppercase;
+      color: var(--teal);
+    }
+
+    h1,
+    h2,
+    h3,
+    blockquote {
+      font-family: var(--serif);
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      margin: 0;
+    }
+
+    h1 {
+      font-size: clamp(3.1rem, 7vw, 5.8rem);
+      line-height: 0.94;
+      max-width: 12ch;
+      margin-top: 18px;
+    }
+
+    .lede {
+      max-width: 58ch;
+      margin-top: 18px;
+      font-size: 1.08rem;
+      line-height: 1.75;
+      color: var(--muted);
+    }
+
+    .hero-meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      margin-top: 24px;
+      color: var(--muted);
+      font-size: 0.92rem;
+    }
+
+    .hero-meta span {
+      padding: 8px 12px;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.6);
+      border: 1px solid rgba(23, 23, 29, 0.08);
+    }
+
+    .hero-links {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      margin-top: 18px;
+    }
+
+    .hero-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      padding: 12px 16px;
+      border-radius: 999px;
+      border: 1px solid rgba(23, 23, 29, 0.08);
+      background: rgba(255, 255, 255, 0.72);
+      font-size: 0.86rem;
+      font-weight: 700;
+      letter-spacing: 0.02em;
+      text-decoration: none;
+      transition: transform 160ms ease, background 160ms ease, border-color 160ms ease;
+    }
+
+    .hero-link:hover {
+      transform: translateY(-1px);
+    }
+
+    .hero-link.primary {
+      background: rgba(15, 94, 99, 0.12);
+      border-color: rgba(15, 94, 99, 0.2);
+      color: var(--teal);
+    }
+
+    .hero-aside {
+      display: grid;
+      gap: 18px;
+      padding: 18px;
+      background:
+        linear-gradient(180deg, rgba(15, 94, 99, 0.88), rgba(19, 42, 62, 0.92)),
+        linear-gradient(135deg, rgba(169, 135, 45, 0.2), transparent 45%);
+      color: #f8f5ef;
+    }
+
+    .hero-aside h2 {
+      font-size: 1.85rem;
+      line-height: 1.02;
+      margin-bottom: 10px;
+    }
+
+    .hero-aside p {
+      margin: 0;
+      line-height: 1.7;
+      color: rgba(248, 245, 239, 0.86);
+    }
+
+    .hero-example-list {
+      list-style: none;
+      margin: 0;
+      padding: 0;
+      display: grid;
+      gap: 12px;
+    }
+
+    .hero-example-list li {
+      padding: 16px 18px;
+      border-radius: 20px;
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      line-height: 1.65;
+      color: rgba(248, 245, 239, 0.88);
+    }
+
+    .hero-example-list strong {
+      display: block;
+      margin-bottom: 6px;
+      color: #fffaf3;
+      font-size: 0.98rem;
+    }
+
+    .metric-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 12px;
+    }
+
+    .metric-card {
+      padding: 18px;
+      border-radius: 22px;
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+    }
+
+    .metric-card strong {
+      display: block;
+      font-size: 2rem;
+      font-family: var(--serif);
+      line-height: 1;
+      margin-bottom: 8px;
+    }
+
+    .metric-card span {
+      color: rgba(248, 245, 239, 0.82);
+      line-height: 1.5;
+      font-size: 0.92rem;
+    }
+
+    main {
+      display: grid;
+      gap: 24px;
+      margin-top: 26px;
+    }
+
+    .section {
+      padding: 30px;
+    }
+
+    .section-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: end;
+      gap: 16px;
+      margin-bottom: 22px;
+    }
+
+    .section-header h2 {
+      font-size: clamp(2rem, 3vw, 3rem);
+      line-height: 0.98;
+      max-width: 12ch;
+    }
+
+    .section-header p {
+      margin: 0;
+      max-width: 42ch;
+      color: var(--muted);
+      line-height: 1.7;
+    }
+
+    .comparison {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 18px;
+    }
+
+    .comparison-card {
+      padding: 24px;
+      border-radius: 24px;
+      background: var(--paper-strong);
+      border: 1px solid var(--line);
+      min-height: 100%;
+    }
+
+    .comparison-card .label {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 14px;
+      font-size: 0.8rem;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+    }
+
+    .comparison-card .label::before {
+      content: "";
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: currentColor;
+    }
+
+    .comparison-card h3 {
+      font-size: 1.8rem;
+      margin-bottom: 12px;
+    }
+
+    .comparison-card p {
+      color: var(--muted);
+      line-height: 1.75;
+      margin: 0 0 16px;
+    }
+
+    .comparison-card ul,
+    .reason-list,
+    .lesson-list,
+    .timeline-list {
+      margin: 0;
+      padding-left: 18px;
+      color: var(--ink);
+    }
+
+    .comparison-card li,
+    .reason-list li,
+    .lesson-list li,
+    .timeline-list li {
+      margin-bottom: 12px;
+      padding-left: 6px;
+      line-height: 1.65;
+    }
+
+    .comparison-card.old .label {
+      color: var(--rust);
+    }
+
+    .comparison-card.new .label {
+      color: var(--teal);
+    }
+
+    .architecture {
+      display: grid;
+      grid-template-columns: 1.1fr 0.9fr;
+      gap: 18px;
+      align-items: start;
+    }
+
+    .stack {
+      display: grid;
+      gap: 14px;
+    }
+
+    .stack-card {
+      position: relative;
+      padding: 22px 24px 22px 80px;
+      border-radius: 24px;
+      background: var(--paper-strong);
+      border: 1px solid var(--line);
+    }
+
+    .stack-card::before {
+      content: attr(data-step);
+      position: absolute;
+      left: 20px;
+      top: 20px;
+      width: 42px;
+      height: 42px;
+      border-radius: 50%;
+      display: grid;
+      place-items: center;
+      font-size: 0.92rem;
+      font-weight: 800;
+      background: rgba(15, 94, 99, 0.11);
+      color: var(--teal);
+    }
+
+    .stack-card h3 {
+      font-size: 1.4rem;
+      margin-bottom: 8px;
+    }
+
+    .stack-card p {
+      margin: 0;
+      color: var(--muted);
+      line-height: 1.7;
+    }
+
+    .code-card {
+      padding: 22px;
+      border-radius: 24px;
+      background: #171b24;
+      color: #ecf0f5;
+      border: 1px solid rgba(255, 255, 255, 0.06);
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05);
+    }
+
+    .code-card h3 {
+      font-family: var(--sans);
+      font-size: 0.82rem;
+      font-weight: 700;
+      letter-spacing: 0.11em;
+      text-transform: uppercase;
+      margin-bottom: 14px;
+      color: rgba(236, 240, 245, 0.72);
+    }
+
+    pre {
+      margin: 0;
+      overflow-x: auto;
+      font-family: var(--mono);
+      font-size: 0.92rem;
+      line-height: 1.7;
+      white-space: pre-wrap;
+    }
+
+    .pull-quote {
+      display: grid;
+      grid-template-columns: 0.95fr 1.05fr;
+      gap: 18px;
+      align-items: stretch;
+    }
+
+    blockquote {
+      margin: 0;
+      padding: 28px;
+      font-size: clamp(1.9rem, 3vw, 2.8rem);
+      line-height: 1.08;
+      border-radius: 26px;
+      background:
+        linear-gradient(180deg, rgba(179, 79, 47, 0.94), rgba(145, 56, 31, 0.98));
+      color: #fff7f0;
+    }
+
+    .quote-notes {
+      padding: 26px;
+      border-radius: 26px;
+      background: var(--paper-strong);
+      border: 1px solid var(--line);
+    }
+
+    .quote-notes p {
+      margin: 0 0 14px;
+      color: var(--muted);
+      line-height: 1.75;
+    }
+
+    .quote-notes p:last-child {
+      margin-bottom: 0;
+    }
+
+    .results-grid {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 14px;
+    }
+
+    .results-details {
+      margin-top: 20px;
+      border-radius: 24px;
+      background: var(--paper-strong);
+      border: 1px solid var(--line);
+      overflow: hidden;
+    }
+
+    .results-details summary {
+      cursor: pointer;
+      list-style: none;
+      padding: 18px 22px;
+      font-weight: 800;
+      letter-spacing: 0.02em;
+      border-bottom: 1px solid transparent;
+    }
+
+    .results-details summary::-webkit-details-marker {
+      display: none;
+    }
+
+    .results-details[open] summary {
+      border-bottom-color: var(--line);
+    }
+
+    .results-details summary::after {
+      content: "+";
+      float: right;
+      font-size: 1.15rem;
+      color: var(--teal);
+    }
+
+    .results-details[open] summary::after {
+      content: "−";
+    }
+
+    .results-columns {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 18px;
+      padding: 18px;
+    }
+
+    .results-pane {
+      border: 1px solid var(--line);
+      border-radius: 20px;
+      background: rgba(255, 255, 255, 0.52);
+      overflow: hidden;
+      min-width: 0;
+    }
+
+    .results-pane-header {
+      padding: 18px 18px 14px;
+      border-bottom: 1px solid var(--line);
+      background: rgba(15, 94, 99, 0.05);
+    }
+
+    .results-pane-title {
+      margin: 0;
+      font-size: 1.05rem;
+      letter-spacing: 0.01em;
+    }
+
+    .results-pane-meta {
+      margin: 6px 0 0;
+      color: var(--muted);
+      font-size: 0.85rem;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+    }
+
+    .results-pane-note {
+      margin: 0;
+      padding: 16px 18px 0;
+      color: var(--muted);
+      font-size: 0.92rem;
+      line-height: 1.5;
+    }
+
+    .table-wrap {
+      overflow-x: auto;
+      padding: 0 0 10px;
+    }
+
+    .results-table {
+      width: 100%;
+      border-collapse: collapse;
+      min-width: 780px;
+      font-size: 0.92rem;
+    }
+
+    .results-table th,
+    .results-table td {
+      padding: 12px 14px;
+      text-align: left;
+      vertical-align: top;
+      border-bottom: 1px solid var(--line);
+      line-height: 1.55;
+    }
+
+    .results-table th {
+      position: sticky;
+      top: 0;
+      background: #f7f1e7;
+      font-size: 0.8rem;
+      font-weight: 800;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--muted);
+    }
+
+    .results-table tbody tr:nth-child(even) {
+      background: rgba(15, 94, 99, 0.03);
+    }
+
+    .results-table td:nth-child(2) {
+      white-space: nowrap;
+    }
+
+    .rlm-models {
+      display: grid;
+      gap: 14px;
+      padding: 0 18px 18px;
+    }
+
+    .rlm-model-card {
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      background: rgba(255, 255, 255, 0.7);
+      overflow: hidden;
+    }
+
+    .rlm-model-header {
+      margin: 0;
+      padding: 14px 16px;
+      border-bottom: 1px solid var(--line);
+      font-size: 0.98rem;
+      background: rgba(15, 94, 99, 0.04);
+    }
+
+    .rlm-budget-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 1px;
+      background: var(--line);
+    }
+
+    .rlm-budget-card {
+      background: rgba(255, 255, 255, 0.92);
+      padding: 14px 16px;
+      min-width: 0;
+    }
+
+    .rlm-budget-label {
+      display: block;
+      margin-bottom: 8px;
+      color: var(--muted);
+      font-size: 0.72rem;
+      font-weight: 800;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      line-height: 1.4;
+    }
+
+    .budget-cell {
+      display: grid;
+      gap: 4px;
+      min-width: 0;
+    }
+
+    .budget-cell strong {
+      font-size: 1.08rem;
+      line-height: 1.1;
+    }
+
+    .budget-meta,
+    .budget-note {
+      display: block;
+      font-size: 0.78rem;
+      color: var(--muted);
+      line-height: 1.4;
+    }
+
+    .budget-note {
+      color: var(--ink);
+      opacity: 0.84;
+    }
+
+    .budget-empty {
+      color: var(--muted);
+      font-style: italic;
+      font-size: 0.86rem;
+    }
+
+    .result-card {
+      padding: 22px;
+      border-radius: 24px;
+      background: var(--paper-strong);
+      border: 1px solid var(--line);
+    }
+
+    .result-card strong {
+      display: block;
+      font-family: var(--serif);
+      font-size: 2.3rem;
+      line-height: 0.94;
+      margin-bottom: 10px;
+    }
+
+    .result-card h3 {
+      font-size: 1.2rem;
+      margin-bottom: 8px;
+    }
+
+    .result-card p {
+      margin: 0;
+      color: var(--muted);
+      line-height: 1.7;
+    }
+
+    .insight-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 16px;
+    }
+
+    .insight-card {
+      padding: 22px;
+      border-radius: 24px;
+      background: var(--paper-strong);
+      border: 1px solid var(--line);
+    }
+
+    .insight-card h3 {
+      font-size: 1.26rem;
+      margin-bottom: 10px;
+    }
+
+    .insight-card p {
+      margin: 0;
+      color: var(--muted);
+      line-height: 1.72;
+    }
+
+    .timeline {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 18px;
+    }
+
+    .timeline-card {
+      padding: 24px;
+      border-radius: 24px;
+      border: 1px solid var(--line);
+      background: var(--paper-strong);
+    }
+
+    .timeline-card h3 {
+      font-size: 1.5rem;
+      margin-bottom: 14px;
+    }
+
+    .timeline-card p {
+      margin: 0 0 14px;
+      color: var(--muted);
+      line-height: 1.72;
+    }
+
+    .closing {
+      display: grid;
+      grid-template-columns: minmax(0, 1.2fr) minmax(280px, 0.8fr);
+      gap: 18px;
+      align-items: start;
+    }
+
+    .closing-copy p {
+      margin: 0 0 16px;
+      color: var(--muted);
+      line-height: 1.82;
+      font-size: 1.02rem;
+    }
+
+    .chip-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 20px;
+    }
+
+    .chip-row span {
+      padding: 9px 13px;
+      border-radius: 999px;
+      background: rgba(15, 94, 99, 0.09);
+      border: 1px solid rgba(15, 94, 99, 0.12);
+      color: var(--teal);
+      font-size: 0.88rem;
+      font-weight: 700;
+    }
+
+    .sidebar-note {
+      padding: 24px;
+      border-radius: 24px;
+      background: linear-gradient(180deg, rgba(169, 135, 45, 0.14), rgba(179, 79, 47, 0.08));
+      border: 1px solid rgba(179, 79, 47, 0.14);
+    }
+
+    .sidebar-note h3 {
+      font-size: 1.42rem;
+      margin-bottom: 10px;
+    }
+
+    .sidebar-note p {
+      margin: 0 0 14px;
+      line-height: 1.72;
+      color: #4d4140;
+    }
+
+    .sidebar-note p:last-child {
+      margin-bottom: 0;
+    }
+
+    footer {
+      padding: 22px 4px 0;
+      text-align: center;
+      color: var(--muted);
+      font-size: 0.92rem;
+    }
+
+    @media (max-width: 980px) {
+      .hero,
+      .architecture,
+      .pull-quote,
+      .timeline,
+      .closing {
+        grid-template-columns: 1fr;
+      }
+
+      .results-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
+      .insight-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .section-header {
+        flex-direction: column;
+        align-items: start;
+      }
+
+      .results-columns {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    @media (max-width: 720px) {
+      .page {
+        width: min(100%, calc(100% - 20px));
+        padding-top: 18px;
+      }
+
+      .hero-copy,
+      .section,
+      .hero-aside {
+        padding: 22px;
+      }
+
+      .comparison,
+      .metric-grid,
+      .results-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .results-columns {
+        padding: 14px;
+      }
+
+      .results-pane-header {
+        padding: 16px 16px 12px;
+      }
+
+      .results-pane-note,
+      .rlm-models {
+        padding-left: 16px;
+        padding-right: 16px;
+      }
+
+      .rlm-budget-grid {
+        grid-template-columns: 1fr;
+      }
+
+      h1 {
+        font-size: clamp(2.5rem, 14vw, 4rem);
+      }
+
+      .result-card strong,
+      .metric-card strong {
+        font-size: 1.8rem;
+      }
+
+      .stack-card {
+        padding-left: 24px;
+      }
+
+      .stack-card::before {
+        position: static;
+        margin-bottom: 12px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <header class="hero">
+      <section class="panel hero-copy">
+        <div>
+          <div class="eyebrow">Crystal Relaxation Architecture Shift</div>
+          <h1>From MultiTurnEnv to RLM</h1>
+          <p class="lede">
+            The move from a classic multi-turn environment to an RLM harness was not a cosmetic refactor. It changed where the task lives, how the agent acts, what the evaluator can trust, and which failures are real science problems instead of format noise or environment plumbing.
+          </p>
+          <div class="hero-meta">
+            <span>Legacy loop: direct feedback in chat</span>
+            <span>New loop: taskset + harness + ComposableEnv</span>
+            <span>Outcome: harder benchmark, cleaner signal</span>
+          </div>
+          <div class="hero-links">
+            <a class="hero-link primary" href="GRPO_For_Materials/blog_post.html">Read the original crystal relaxation post</a>
+            <a class="hero-link" href="index.html#portfolio">Back to portfolio</a>
+          </div>
+        </div>
+        <div>
+          <p class="lede" style="max-width: 60ch; margin-bottom: 0;">
+            In the crystal relaxation project, the old setup was good at testing whether a model could emit a plausible final CIF under a tight feedback loop. The RLM version asks a more serious question: can the model actually operate as an agent, use tools, inspect intermediate state, and converge on a physically better structure under a realistic workflow?
+          </p>
+        </div>
+      </section>
+
+      <aside class="panel hero-aside">
+        <div>
+          <h2>Examples of smart Python use in RLM evals</h2>
+          <p>
+            The RLM traces are useful because they show models using Python as an analysis tool, not just as a way to emit text. In the GPT-5.5 run, some of the best rollouts used short scripts to inspect geometry, reconstruct prototypes, and search for safer candidates before committing a CIF.
+          </p>
+        </div>
+        <ol class="hero-example-list">
+          <li>
+            <strong>mp-690760, TiH</strong>
+            The agent used <code>numpy</code> and periodic-image wrapping to compute Ti-Ti, Ti-H, and H-H distances, found the short Ti-H contacts causing strain, then switched to <code>pymatgen</code> neighbor and symmetry analysis to test a NiAs-like hypothesis before writing a new candidate CIF.
+          </li>
+          <li>
+            <strong>mp-976260, LiTm2Au</strong>
+            The agent reconstructed an ideal full-Heusler layout in Python, then swept lattice constants and compared checker outputs across candidates. That turned the checker into a small search loop and let it pick a safer cell size after seeing which values reduced the force proxy most cleanly.
+          </li>
+          <li>
+            <strong>mp-867125, Al2RuPt</strong>
+            Instead of hand-editing sixteen atomic sites, the agent wrote a <code>write_cif(a)</code> helper that generated the whole Heusler-style structure programmatically. That made it easy to emit a consistent candidate, validate it, and avoid manual transcription errors.
+          </li>
+        </ol>
+      </aside>
+    </header>
+
+    <main>
+      <section class="panel section">
+        <div class="section-header">
+          <h2>What changed, exactly?</h2>
+          <p>
+            The architecture change was a shift in responsibility. The old environment owned the loop. The new stack separates what the model should solve from how the model is allowed to solve it.
+          </p>
+        </div>
+        <div class="comparison">
+          <article class="comparison-card old">
+            <div class="label">Before</div>
+            <h3>Classic MultiTurnEnv</h3>
+            <p>
+              The environment stepped the conversation forward, injected feedback, and expected the model to return a final CIF through a chat-facing answer contract. That made iteration fast, but it also tightly coupled task logic, state management, and evaluation behavior.
+            </p>
+            <ul>
+              <li>The agent mostly saw score and feedback, not a real tool surface.</li>
+              <li>Answer extraction lived in the chat contract, so format failures could dominate the result.</li>
+              <li>Shared mutable state created a real concurrency bug before the corrected reruns.</li>
+              <li>The benchmark rewarded quick direct repair more than agent workflow quality.</li>
+            </ul>
+          </article>
+
+          <article class="comparison-card new">
+            <div class="label">After</div>
+            <h3>RLM + ComposableEnv</h3>
+            <p>
+              The new setup uses a taskset for dataset and metadata, a harness for system prompt and tools, and ComposableEnv as the orchestrator. The model operates through files, checker calls, and sandbox state, with the final answer written to <strong>final.cif</strong> instead of squeezed through chat formatting.
+            </p>
+            <ul>
+              <li>The agent can inspect inputs, run code, write files, and revise against tool results.</li>
+              <li>Task definition and agent policy are cleanly separated.</li>
+              <li>The output contract is file-based, which sharply reduces extraction noise.</li>
+              <li>Failures become more diagnostic: symmetry, formation energy, composition, and workflow quality.</li>
+            </ul>
+          </article>
+        </div>
+      </section>
+
+      <section class="panel section">
+        <div class="section-header">
+          <h2>The new mental model</h2>
+          <p>
+            The migration plan boiled the RLM version down to three pieces. That decomposition matters because it gives each layer one job and makes it easier to reason about scaling, tooling, and debugging.
+          </p>
+        </div>
+        <div class="architecture">
+          <div class="stack">
+            <article class="stack-card" data-step="01">
+              <h3>Taskset</h3>
+              <p>
+                Holds the dataset, task metadata, sandbox inputs, and instruction construction. It answers the question: what is the model solving on this rollout?
+              </p>
+            </article>
+            <article class="stack-card" data-step="02">
+              <h3>Harness</h3>
+              <p>
+                Defines the system prompt, available tools, and the working style of the agent. It answers the question: how is the model allowed to work?
+              </p>
+            </article>
+            <article class="stack-card" data-step="03">
+              <h3>ComposableEnv</h3>
+              <p>
+                Owns the rollout loop, state, sandbox orchestration, scoring handoff, and turn budget. It answers the question: how do these pieces run together at scale?
+              </p>
+            </article>
+          </div>
+
+          <aside class="code-card">
+            <h3>Architecture in one glance</h3>
+            <pre>Old:
+MultiTurnEnv
+  -> prompt the model
+  -> inject validator feedback
+  -> parse final CIF from chat
+  -> score
+
+New:
+Taskset + Harness + ComposableEnv
+  -> mount task inputs in sandbox
+  -> let the agent inspect and edit files
+  -> run checker calls during the loop
+  -> read final.cif
+  -> score the final artifact</pre>
+          </aside>
+        </div>
+      </section>
+
+      <section class="pull-quote">
+        <blockquote class="panel">
+          The point of the RLM transition was not to make the task easier. It was to make the benchmark honest.
+        </blockquote>
+        <div class="quote-notes panel">
+          <p>
+            Classic stayed stronger on short direct-feedback evals, especially for smaller models. But RLM exposed something more valuable: whether the model could actually operate under a tool-mediated scientific workflow instead of merely responding well to tightly curated chat feedback.
+          </p>
+          <p>
+            That distinction matters for training. If a rollout fails because a parser could not extract the answer, you learn almost nothing. If it fails because the model preserved composition but never found a low-energy structure, you learn where the agent policy is weak.
+          </p>
+        </div>
+      </section>
+
+      <section class="panel section">
+        <div class="section-header">
+          <h2>Experiments</h2>
+        </div>
+        <div class="results-grid">
+          <article class="result-card">
+            <strong>75/75</strong>
+            <h3>Format reliability in RLM</h3>
+            <p>
+              Every completed RLM rerun achieved perfect format reward. The file-based final answer contract almost eliminated the answer-extraction failures that distorted classic runs, especially for Claude.
+            </p>
+          </article>
+          <article class="result-card">
+            <strong>0.783</strong>
+            <h3>Best RLM baseline</h3>
+            <p>
+              GPT-5.5 reached a mean reward of 0.783 with 55 of 75 full-credit rollouts under the larger 15-turn, 5-check non-trusted-image configuration.
+            </p>
+          </article>
+          <article class="result-card">
+            <strong>0.998</strong>
+            <h3>Classic still easier</h3>
+            <p>
+              The corrected classic environment let GPT-5.5 nearly saturate the rubric. That remained useful as a solvability reference, but it also confirmed that classic is a friendlier surface than the RLM harness.
+            </p>
+          </article>
+          <article class="result-card">
+            <strong>0/75</strong>
+            <h3>Leak fixed, then moved past</h3>
+            <p>
+              After isolating classic environment state per rollout, the composition leak disappeared. That fix was necessary, but the migration still mattered because architecture and evaluation were too entangled in the old loop.
+            </p>
+          </article>
+        </div>
+        <details class="results-details">
+          <summary>Full table results</summary>
+          <div class="results-columns">
+            <section class="results-pane">
+              <header class="results-pane-header">
+                <h3 class="results-pane-title">crystal_relaxation</h3>
+                <p class="results-pane-meta">Classic MultiTurnEnv runs</p>
+              </header>
+              <div class="table-wrap">
+                <table class="results-table">
+                  <thead>
+                    <tr>
+                      <th>Local eval id</th>
+                      <th>Model</th>
+                      <th>Run shape</th>
+                      <th>Mean reward</th>
+                      <th>pass@1</th>
+                      <th>pass@2</th>
+                      <th>Notes</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr><td>8962a2f4</td><td>openai/gpt-5.5</td><td>25x3</td><td>0.998</td><td>1.000</td><td>1.000</td><td>Best overall classic run.</td></tr>
+                    <tr><td>16d858ab</td><td>openai/gpt-5.5</td><td>25x3, 3 turns</td><td>0.758</td><td>0.760</td><td>0.880</td><td>Strong but had 32% model/API errors.</td></tr>
+                    <tr><td>536b00ba</td><td>google/gemini-2.5-flash</td><td>25x3, 2 turns</td><td>0.687</td><td>0.747</td><td>0.933</td><td>Strong classic baseline; 15/75 perfect rollouts.</td></tr>
+                    <tr><td>4427177a</td><td>google/gemini-2.5-flash</td><td>25x3, 3 turns</td><td>0.525 finite-only</td><td>0.413</td><td>0.600</td><td>One invalid/NaN rollout made saved mean null.</td></tr>
+                    <tr><td>1da43e7e</td><td>openai/gpt-5.4-mini</td><td>25x3, 2 turns</td><td>0.624</td><td>0.587</td><td>0.787</td><td>Solid classic baseline.</td></tr>
+                    <tr><td>b7aee56f</td><td>openai/gpt-5.4-mini</td><td>25x3, 3 turns</td><td>0.508</td><td>0.400</td><td>0.547</td><td>Worse than the prior 2-turn classic run.</td></tr>
+                    <tr><td>f2c5f410</td><td>qwen/qwen3-8b</td><td>10x3, 2 turns</td><td>0.332</td><td>0.267</td><td>0.433</td><td>Weak classic run.</td></tr>
+                    <tr><td>83a9b09c</td><td>anthropic/claude-haiku-4.5</td><td>25x3, 2 turns</td><td>0.185</td><td>0.200</td><td>0.333</td><td>Weak; 54/75 zero-reward trajectories.</td></tr>
+                    <tr><td>32315f0c</td><td>anthropic/claude-haiku-4.5</td><td>25x3, 3 turns</td><td>0.298</td><td>0.267</td><td>0.413</td><td>Improved over prior 2-turn classic run.</td></tr>
+                  </tbody>
+                </table>
+              </div>
+            </section>
+
+            <section class="results-pane">
+              <header class="results-pane-header">
+                <h3 class="results-pane-title">RLM</h3>
+                <p class="results-pane-meta">crystal-relaxation-rlm and crystal_relaxation_rlm runs</p>
+              </header>
+              <p class="results-pane-note">
+                Read across each row to compare how the same model behaved as the RLM budget increased from the shorter 5-turn baseline to the 10-turn and 15-turn variants.
+              </p>
+              <div class="rlm-models">
+                <article class="rlm-model-card">
+                  <h4 class="rlm-model-header">openai/gpt-5.5</h4>
+                  <div class="rlm-budget-grid">
+                    <section class="rlm-budget-card"><span class="rlm-budget-label">5 turns / 1 check</span><div class="budget-cell"><strong>0.618</strong><span class="budget-meta">pass@1 0.493 · pass@2 0.587</span><span class="budget-meta">eval 45491238</span><span class="budget-note">Best short-budget RLM run; 37/75 full-credit rollouts.</span></div></section>
+                    <section class="rlm-budget-card"><span class="rlm-budget-label">10 turns / 3 checks</span><div class="budget-cell"><strong>0.341</strong><span class="budget-meta">pass@1 0.240 · pass@2 0.347</span><span class="budget-meta">eval 003b7c4d</span><span class="budget-note">Full rerun; lower than the 5-turn baseline.</span></div></section>
+                    <section class="rlm-budget-card"><span class="rlm-budget-label">10 turns / 3 checks<br>Non-trusted image, concurrency 5</span><div class="budget-cell"><strong>0.516</strong><span class="budget-meta">pass@1 0.440 · pass@2 0.520</span><span class="budget-meta">eval 34ff5575</span><span class="budget-note">Cleaner dependency path; 33/75 full-credit rollouts.</span></div></section>
+                    <section class="rlm-budget-card"><span class="rlm-budget-label">15 turns / 5 checks<br>Non-trusted image, concurrency 5</span><div class="budget-cell"><strong>0.783</strong><span class="budget-meta">pass@1 0.733 · pass@2 0.760</span><span class="budget-meta">eval 60cf0943</span><span class="budget-note">Best RLM run so far; 55/75 full-credit rollouts.</span></div></section>
+                  </div>
+                </article>
+
+                <article class="rlm-model-card">
+                  <h4 class="rlm-model-header">openai/gpt-5.4-mini</h4>
+                  <div class="rlm-budget-grid">
+                    <section class="rlm-budget-card"><span class="rlm-budget-label">5 turns / 1 check</span><div class="budget-cell"><strong>0.348</strong><span class="budget-meta">pass@1 0.013 · pass@2 0.027</span><span class="budget-meta">eval 194e350b</span><span class="budget-note">Good format/composition, weak energy and symmetry.</span></div></section>
+                    <section class="rlm-budget-card"><span class="rlm-budget-label">10 turns / 3 checks</span><div class="budget-cell"><strong>0.314</strong><span class="budget-meta">pass@1 0.013 · pass@2 0.027</span><span class="budget-meta">eval 870af5d2</span><span class="budget-note">More checks improved composition but not final energy.</span></div></section>
+                    <section class="rlm-budget-card"><span class="rlm-budget-label">10 turns / 3 checks<br>Non-trusted image, concurrency 5</span><div class="budget-cell"><strong>0.376</strong><span class="budget-meta">pass@1 0.080 · pass@2 0.120</span><span class="budget-meta">eval 0d02feeb</span><span class="budget-note">Reliable, but still weak on formation energy.</span></div></section>
+                    <section class="rlm-budget-card"><span class="rlm-budget-label">15 turns / 5 checks<br>Non-trusted image, concurrency 5</span><div class="budget-cell"><strong>0.408</strong><span class="budget-meta">pass@1 0.107 · pass@2 0.173</span><span class="budget-meta">eval 5dd698c6</span><span class="budget-note">Modest gain from larger budget; 8/75 full-credit rollouts.</span></div></section>
+                  </div>
+                </article>
+
+                <article class="rlm-model-card">
+                  <h4 class="rlm-model-header">google/gemini-2.5-flash</h4>
+                  <div class="rlm-budget-grid">
+                    <section class="rlm-budget-card"><span class="rlm-budget-label">5 turns / 1 check</span><div class="budget-cell"><strong>0.322</strong><span class="budget-meta">pass@1 0.160 · pass@2 0.280</span><span class="budget-meta">eval 2ec0705d</span><span class="budget-note">Viable after lowering concurrency.</span></div></section>
+                    <section class="rlm-budget-card"><span class="rlm-budget-label">10 turns / 3 checks</span><div class="budget-cell"><strong>0.252</strong><span class="budget-meta">pass@1 0.093 · pass@2 0.173</span><span class="budget-meta">eval e59f5b1d</span><span class="budget-note">Completed with 3/75 model or agent errors.</span></div></section>
+                    <section class="rlm-budget-card"><span class="rlm-budget-label">10 turns / 3 checks<br>Non-trusted image, concurrency 5</span><div class="budget-cell"><strong>0.297</strong><span class="budget-meta">pass@1 0.160 · pass@2 0.280</span><span class="budget-meta">eval 1476c619</span><span class="budget-note">Similar pass rate to the older baseline, with more low-reward partials.</span></div></section>
+                    <section class="rlm-budget-card"><span class="rlm-budget-label">15 turns / 5 checks<br>Non-trusted image, concurrency 5</span><div class="budget-cell"><strong>0.259</strong><span class="budget-meta">pass@1 0.107 · pass@2 0.173</span><span class="budget-meta">eval 65760884</span><span class="budget-note">Regressed under larger budget; 4% error rate.</span></div></section>
+                  </div>
+                </article>
+
+                <article class="rlm-model-card">
+                  <h4 class="rlm-model-header">anthropic/claude-haiku-4.5</h4>
+                  <div class="rlm-budget-grid">
+                    <section class="rlm-budget-card"><span class="rlm-budget-label">5 turns / 1 check</span><div class="budget-cell"><strong>0.320</strong><span class="budget-meta">pass@1 0.067 · pass@2 0.133</span><span class="budget-meta">eval 23269e2e</span><span class="budget-note">Viable after lowering concurrency; physical checks remain weak.</span></div></section>
+                    <section class="rlm-budget-card"><span class="rlm-budget-label">10 turns / 3 checks</span><div class="budget-cell"><strong>0.104</strong><span class="budget-meta">pass@1 0.000 · pass@2 0.000</span><span class="budget-meta">eval d71cef5b</span><span class="budget-note">Degenerated to format-only behavior.</span></div></section>
+                    <section class="rlm-budget-card"><span class="rlm-budget-label">10 turns / 3 checks<br>Non-trusted image, concurrency 5</span><div class="budget-cell"><strong>0.303</strong><span class="budget-meta">pass@1 0.133 · pass@2 0.200</span><span class="budget-meta">eval 01cf1c10</span><span class="budget-note">Stable, but often hits the turn limit.</span></div></section>
+                    <section class="rlm-budget-card"><span class="rlm-budget-label">15 turns / 5 checks<br>Non-trusted image, concurrency 5</span><div class="budget-cell"><strong>0.454</strong><span class="budget-meta">pass@1 0.267 · pass@2 0.413</span><span class="budget-meta">eval 786ad9af</span><span class="budget-note">Best non-GPT-5.5 larger-budget RLM result.</span></div></section>
+                  </div>
+                </article>
+
+                <article class="rlm-model-card">
+                  <h4 class="rlm-model-header">qwen/qwen3-8b</h4>
+                  <div class="rlm-budget-grid">
+                    <section class="rlm-budget-card"><span class="rlm-budget-label">5 turns / 1 check</span><div class="budget-cell"><strong>0.027</strong><span class="budget-meta">pass@1 0.000 · pass@2 0.000</span><span class="budget-meta">eval eb656941</span><span class="budget-note">Only recorded RLM run in this sweep.</span></div></section>
+                    <section class="rlm-budget-card"><span class="rlm-budget-label">10 turns / 3 checks</span><span class="budget-empty">No run</span></section>
+                    <section class="rlm-budget-card"><span class="rlm-budget-label">10 turns / 3 checks<br>Non-trusted image, concurrency 5</span><span class="budget-empty">No run</span></section>
+                    <section class="rlm-budget-card"><span class="rlm-budget-label">15 turns / 5 checks<br>Non-trusted image, concurrency 5</span><span class="budget-empty">No run</span></section>
+                  </div>
+                </article>
+              </div>
+            </section>
+          </div>
+        </details>
+      </section>
+
+      <section class="panel section">
+        <div class="section-header">
+          <h2>Why the transition matters</h2>
+          <p>
+            A strict 1:1 comparison on short runs does not always favor RLM. Its value is that the harness is easier and cheaper to scale to longer trajectories, larger checker budgets, and broader sweeps, which is where the extra workflow signal starts to pay off.
+          </p>
+        </div>
+        <div class="insight-grid">
+          <article class="insight-card">
+            <h3>It separates formatting from competence</h3>
+            <p>
+              In the classic environment, malformed tags or parser-hostile prose could erase otherwise useful structure generation. In RLM, the final artifact lives in a real file, so scoring is tied more tightly to the structure itself.
+            </p>
+          </article>
+          <article class="insight-card">
+            <h3>It turns tools into first-class training context</h3>
+            <p>
+              The model no longer has to simulate a workflow through text alone. It can inspect the unrelaxed CIF, revise files, call a checker, and use the sandbox the way a real agent would.
+            </p>
+          </article>
+          <article class="insight-card">
+            <h3>It makes failure modes legible</h3>
+            <p>
+              The hard problems become visible: composition mismatch, force-proxy failures, spacegroup collapse to P1, and failure to reach low formation energy. Those are the right problems to optimize.
+            </p>
+          </article>
+        </div>
+      </section>
+
+      <section class="panel section">
+        <div class="section-header">
+          <h2>What stayed hard</h2>
+          <p>
+            RLM fixed a lot of interface noise, but it did not solve the underlying scientific challenge. The migration reduced ambiguity. It did not remove difficulty.
+          </p>
+        </div>
+        <div class="timeline">
+          <article class="timeline-card">
+            <h3>Classic exposed quick-answer strength</h3>
+            <p>
+              The corrected multi-turn environment was fast and direct. Models that could infer a prototype and output a strong CIF immediately did well. GPT-5.5 was exceptional there, and the smaller models benefited from the simpler contract.
+            </p>
+            <ul class="timeline-list">
+              <li>Direct validator feedback in chat encouraged fast local repair.</li>
+              <li>Short runs were useful for solvability checks and cheap baselines.</li>
+              <li>But the task mixed model quality with answer-format fragility.</li>
+            </ul>
+          </article>
+          <article class="timeline-card">
+            <h3>RLM exposed workflow strength</h3>
+            <p>
+              The RLM harness rewarded models that could use a checker productively, manage files, and spend turns on diagnosis instead of surface repair. GPT-5.5 improved the most under larger budgets, while weaker models often remained stuck in local cleanup.
+            </p>
+            <ul class="timeline-list">
+              <li>Claude benefited heavily from the file-based output contract.</li>
+              <li>GPT-5.4-mini often preserved chemistry but missed energy and symmetry.</li>
+              <li>Gemini showed upside, but concurrency and early stopping mattered.</li>
+            </ul>
+          </article>
+        </div>
+      </section>
+
+      <section class="panel section">
+        <div class="section-header">
+          <h2>Three lessons from the migration</h2>
+          <p>
+            The architecture shift surfaced a few durable principles that apply beyond crystal relaxation.
+          </p>
+        </div>
+        <ol class="lesson-list">
+          <li><strong>State isolation is non-negotiable.</strong> The classic composition leak showed how quickly concurrent rollouts can invalidate a benchmark when environment state is shared implicitly.</li>
+          <li><strong>File-based outputs are better than chat-only answer contracts for tool tasks.</strong> RLM did not magically improve chemistry, but it dramatically improved validity and extraction reliability.</li>
+          <li><strong>More turns only help when the agent can spend them well.</strong> GPT-5.5 benefited from larger turn and checker budgets; weaker models often used the extra room for conservative, local edits that never crossed the scientific threshold.</li>
+        </ol>
+      </section>
+
+      <section class="panel section closing">
+        <div class="closing-copy">
+          <div class="section-header" style="margin-bottom: 16px;">
+            <h2>The real outcome</h2>
+          </div>
+          <p>
+            The transition from MultiTurnEnv to RLM was a move from a tightly scripted evaluator to a more faithful agent environment. The old loop is still useful as a quick, easy-to-compare baseline. But the RLM harness is the better place to measure what matters next: tool use, revision strategy, and whether the model can turn partial scientific signal into a better structure.
+          </p>
+          <p>
+            That is why the most important result in the migration report is not just the top-line reward. It is the change in what the reward means. Once format failures and environment leaks stop dominating the outcome, the benchmark starts telling the truth.
+          </p>
+          <div class="chip-row">
+            <span>Taskset</span>
+            <span>Harness</span>
+            <span>ComposableEnv</span>
+            <span>Sandbox Workflow</span>
+            <span>final.cif</span>
+            <span>Cleaner Eval Signal</span>
+          </div>
+        </div>
+        <aside class="sidebar-note">
+          <h3>Short version</h3>
+          <p>
+            Classic multi-turn proved the task was solvable.
+          </p>
+          <p>
+            RLM made the task trainable in the way agents actually work.
+          </p>
+          <p>
+            That is the transition in one sentence.
+          </p>
+        </aside>
+      </section>
+    </main>
+
+    <footer>
+      Built from the crystal relaxation migration plan, experiment annotations, and transition report.
+    </footer>
+  </div>
+</body>
+</html>

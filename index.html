@@ -49,6 +49,9 @@
             border-color: #d4d4d4;
             transform: translateY(-2px);
         }
+        details.crystal-project[open] .crystal-chevron {
+            transform: rotate(180deg);
+        }
         /* details open chevron */
         details[open] .rl-chevron {
             transform: rotate(180deg);
@@ -129,45 +132,75 @@
                     <div class="pb-10 space-y-0">
 
                         <!-- Crystal Relaxation -->
-                        <a href="GRPO_For_Materials/blog_post.html" class="flex items-start gap-5 py-5 border-t border-[#f5f5f5] group/env hover:bg-zinc-50 transition-colors rounded-sm px-1">
-                            <!-- Thumbnail -->
-                            <div class="flex-shrink-0 w-20 h-16 overflow-hidden rounded-sm bg-zinc-100 relative">
-                                <div id="rl-crystal-vis-sm" style="position:absolute; inset:0; overflow:hidden;">
-                                    <div class="rl-crys-state-sm" style="position:absolute; inset:0; display:flex; align-items:center; justify-content:center; transition:opacity 0.6s;">
-                                        <svg viewBox="0 0 100 80" width="80" height="64">
-                                            <rect x="8" y="6" width="84" height="62" fill="none" stroke="#94a3b8" stroke-width="1.5" stroke-dasharray="4,2" rx="2"/>
-                                            <circle cx="22" cy="20" r="9" fill="#3b82f6" stroke="#1d4ed8" stroke-width="1.5"/>
-                                            <text x="22" y="24" text-anchor="middle" fill="#fff" font-size="8" font-weight="700">Ti</text>
-                                            <circle cx="82" cy="18" r="9" fill="#3b82f6" stroke="#1d4ed8" stroke-width="1.5"/>
-                                            <text x="82" y="22" text-anchor="middle" fill="#fff" font-size="8" font-weight="700">Ti</text>
-                                            <circle cx="50" cy="65" r="6" fill="#ef4444" stroke="#dc2626" stroke-width="1.5"/>
-                                            <text x="50" y="68" text-anchor="middle" fill="#fff" font-size="6" font-weight="700">H</text>
-                                        </svg>
-                                    </div>
-                                    <div class="rl-crys-state-sm" style="position:absolute; inset:0; display:flex; align-items:center; justify-content:center; opacity:0; transition:opacity 0.6s;">
-                                        <svg viewBox="0 0 100 80" width="80" height="64">
-                                            <rect x="8" y="6" width="84" height="62" fill="none" stroke="#94a3b8" stroke-width="1.5" stroke-dasharray="4,2" rx="2"/>
-                                            <circle cx="18" cy="18" r="9" fill="#3b82f6" stroke="#1d4ed8" stroke-width="1.5"/>
-                                            <text x="18" y="22" text-anchor="middle" fill="#fff" font-size="8" font-weight="700">Ti</text>
-                                            <circle cx="82" cy="18" r="9" fill="#3b82f6" stroke="#1d4ed8" stroke-width="1.5"/>
-                                            <text x="82" y="22" text-anchor="middle" fill="#fff" font-size="8" font-weight="700">Ti</text>
-                                            <circle cx="50" cy="60" r="6" fill="#22c55e" stroke="#15803d" stroke-width="1.5"/>
-                                            <text x="50" y="63" text-anchor="middle" fill="#fff" font-size="6" font-weight="700">H</text>
-                                        </svg>
+                        <details class="crystal-project group/crystal border-t border-[#f5f5f5]" open>
+                            <summary class="flex items-start gap-5 py-5 cursor-pointer list-none select-none rounded-sm px-1 hover:bg-zinc-50 transition-colors">
+                                <div class="flex-shrink-0 w-20 h-16 overflow-hidden rounded-sm bg-zinc-100 relative">
+                                    <div id="rl-crystal-vis-sm" style="position:absolute; inset:0; overflow:hidden;">
+                                        <div class="rl-crys-state-sm" style="position:absolute; inset:0; display:flex; align-items:center; justify-content:center; transition:opacity 0.6s;">
+                                            <svg viewBox="0 0 100 80" width="80" height="64">
+                                                <rect x="8" y="6" width="84" height="62" fill="none" stroke="#94a3b8" stroke-width="1.5" stroke-dasharray="4,2" rx="2"/>
+                                                <circle cx="22" cy="20" r="9" fill="#3b82f6" stroke="#1d4ed8" stroke-width="1.5"/>
+                                                <text x="22" y="24" text-anchor="middle" fill="#fff" font-size="8" font-weight="700">Ti</text>
+                                                <circle cx="82" cy="18" r="9" fill="#3b82f6" stroke="#1d4ed8" stroke-width="1.5"/>
+                                                <text x="82" y="22" text-anchor="middle" fill="#fff" font-size="8" font-weight="700">Ti</text>
+                                                <circle cx="50" cy="65" r="6" fill="#ef4444" stroke="#dc2626" stroke-width="1.5"/>
+                                                <text x="50" y="68" text-anchor="middle" fill="#fff" font-size="6" font-weight="700">H</text>
+                                            </svg>
+                                        </div>
+                                        <div class="rl-crys-state-sm" style="position:absolute; inset:0; display:flex; align-items:center; justify-content:center; opacity:0; transition:opacity 0.6s;">
+                                            <svg viewBox="0 0 100 80" width="80" height="64">
+                                                <rect x="8" y="6" width="84" height="62" fill="none" stroke="#94a3b8" stroke-width="1.5" stroke-dasharray="4,2" rx="2"/>
+                                                <circle cx="18" cy="18" r="9" fill="#3b82f6" stroke="#1d4ed8" stroke-width="1.5"/>
+                                                <text x="18" y="22" text-anchor="middle" fill="#fff" font-size="8" font-weight="700">Ti</text>
+                                                <circle cx="82" cy="18" r="9" fill="#3b82f6" stroke="#1d4ed8" stroke-width="1.5"/>
+                                                <text x="82" y="22" text-anchor="middle" fill="#fff" font-size="8" font-weight="700">Ti</text>
+                                                <circle cx="50" cy="60" r="6" fill="#22c55e" stroke="#15803d" stroke-width="1.5"/>
+                                                <text x="50" y="63" text-anchor="middle" fill="#fff" font-size="6" font-weight="700">H</text>
+                                            </svg>
+                                        </div>
                                     </div>
                                 </div>
-                            </div>
-                            <!-- Text -->
-                            <div class="flex-1 min-w-0">
-                                <div class="flex items-baseline gap-3 flex-wrap">
-                                    <span class="font-medium text-sm text-zinc-900 group-hover/env:underline underline-offset-2">Crystal Relaxation</span>
-                                    <span class="text-[9px] font-mono text-zinc-400 tracking-widest uppercase bg-zinc-100 px-2 py-0.5 rounded">CHGNet</span>
-                                    <span class="text-[9px] font-mono text-zinc-400 tracking-widest uppercase bg-zinc-100 px-2 py-0.5 rounded">Materials</span>
-                                    <span class="text-[9px] font-mono text-emerald-600 tracking-widest uppercase bg-emerald-50 px-2 py-0.5 rounded">Blog Post ↗</span>
+                                <div class="flex-1 min-w-0">
+                                    <div class="flex items-baseline gap-3 flex-wrap">
+                                        <span class="font-medium text-sm text-zinc-900 group-hover/crystal:underline underline-offset-2">Crystal Relaxation</span>
+                                        <span class="text-[9px] font-mono text-zinc-400 tracking-widest uppercase bg-zinc-100 px-2 py-0.5 rounded">CHGNet</span>
+                                        <span class="text-[9px] font-mono text-zinc-400 tracking-widest uppercase bg-zinc-100 px-2 py-0.5 rounded">Materials</span>
+                                        <span class="text-[9px] font-mono text-cyan-700 tracking-widest uppercase bg-cyan-50 px-2 py-0.5 rounded">2 linked pages</span>
+                                    </div>
+                                    <p class="mt-1 text-sm text-zinc-500 font-light leading-relaxed">GRPO environment for crystal structure relaxation using CHGNet as a force-field surrogate. Expand to open the original writeup and the RLM continuation.</p>
                                 </div>
-                                <p class="mt-1 text-sm text-zinc-500 font-light leading-relaxed">GRPO environment for crystal structure relaxation using CHGNet as a force-field surrogate. Reward is formation energy convergence.</p>
+                                <div class="flex-shrink-0 flex flex-col items-end gap-1 ml-4 pt-1">
+                                    <span class="text-[9px] font-mono text-zinc-400 tracking-widest uppercase">2 projects</span>
+                                    <span class="crystal-chevron text-zinc-400 text-lg transition-transform duration-300">↓</span>
+                                </div>
+                            </summary>
+
+                            <div class="ml-[6.25rem] mr-1 -mt-1 mb-5 space-y-3 border-l border-zinc-200 pl-4">
+                                <a href="GRPO_For_Materials/blog_post.html" class="flex items-start gap-4 rounded-sm bg-zinc-50 px-4 py-3 hover:bg-zinc-100 transition-colors">
+                                    <div class="flex-1 min-w-0">
+                                        <div class="flex items-baseline gap-3 flex-wrap">
+                                            <span class="font-medium text-sm text-zinc-900 hover:underline underline-offset-2">Crystal Relaxation — Main Writeup</span>
+                                            <span class="text-[9px] font-mono text-zinc-500 tracking-widest uppercase bg-white px-2 py-0.5 rounded">Original</span>
+                                            <span class="text-[9px] font-mono text-emerald-600 tracking-widest uppercase bg-emerald-50 px-2 py-0.5 rounded">Blog Post</span>
+                                        </div>
+                                        <p class="mt-1 text-sm text-zinc-600 font-light leading-relaxed">Original post covering the MultiTurnEnv setup, CHGNet-backed reward design, and training analysis.</p>
+                                    </div>
+                                    <span class="text-[10px] font-mono tracking-[0.18em] uppercase text-zinc-500 whitespace-nowrap">Open ↗</span>
+                                </a>
+
+                                <a href="crystal_relaxation_multiturn_to_rlm_blog.html" class="flex items-start gap-4 rounded-sm border-l-2 border-cyan-200 bg-cyan-50/70 px-4 py-3 hover:bg-cyan-50 transition-colors">
+                                    <div class="flex-1 min-w-0">
+                                        <div class="flex items-baseline gap-3 flex-wrap">
+                                            <span class="font-medium text-sm text-zinc-900 hover:underline underline-offset-2">Crystal Relaxation — RLM Transition</span>
+                                            <span class="text-[9px] font-mono text-cyan-700 tracking-widest uppercase bg-white px-2 py-0.5 rounded">Continuation</span>
+                                            <span class="text-[9px] font-mono text-zinc-400 tracking-widest uppercase bg-white px-2 py-0.5 rounded">Standalone Page</span>
+                                        </div>
+                                        <p class="mt-1 text-sm text-zinc-600 font-light leading-relaxed">Follow-up article on the migration from the original MultiTurnEnv setup into the RLM harness, with agent workflow, tool use, and eval comparisons.</p>
+                                    </div>
+                                    <span class="text-[10px] font-mono tracking-[0.18em] uppercase text-cyan-700 whitespace-nowrap">Open ↗</span>
+                                </a>
                             </div>
-                        </a>
+                        </details>
 
                         <!-- Molecule DFT RL -->
                         <div class="flex items-start gap-5 py-5 border-t border-[#f5f5f5] group/env px-1">

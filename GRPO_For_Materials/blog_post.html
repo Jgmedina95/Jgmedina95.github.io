@@ -14,6 +14,7 @@
         /* Custom styles for the energy landscape vibes */
         .gradient-text {
             background: linear-gradient(90deg, #4f46e5, #06b6d4);
+            background-clip: text;
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
         }
@@ -923,6 +924,33 @@ reward = 0.15 if composition_matches else 0.0</code></pre>
                 <a href="https://app.primeintellect.ai/dashboard/environments/jmedina9/crystal_relaxation"
                    target="_blank" rel="noopener noreferrer"
                    class="inline-block bg-blue-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-blue-700 transition shadow-lg">View on Prime Intellect &rarr;</a>
+            </div>
+
+            <h2 class="text-2xl font-bold mt-10 mb-4">From MultiTurnEnv to RLM</h2>
+            <div class="bg-gradient-to-r from-slate-50 to-cyan-50 dark:from-slate-800 dark:to-cyan-950/40 border border-slate-200 dark:border-slate-700 rounded-xl p-6 mb-8">
+                <div class="flex flex-col gap-6 md:flex-row md:items-start md:justify-between">
+                    <div>
+                        <p class="text-sm font-semibold uppercase tracking-[0.18em] text-cyan-700 dark:text-cyan-300 mb-3">Next phase</p>
+                        <p class="text-gray-700 dark:text-gray-300 mb-4">
+                            This post documents the original MultiTurnEnv version of crystal relaxation: chat-native feedback, rubric-guided retries, and answer extraction from the model response. The next iteration moves the task into an RLM harness where the agent works through files, checker calls, and a sandbox, with the final structure written to <code>final.cif</code>.
+                        </p>
+                        <ul class="list-disc list-inside text-sm text-gray-700 dark:text-gray-300 space-y-2">
+                            <li>The benchmark becomes less sensitive to parser noise and more sensitive to actual structure quality.</li>
+                            <li>Tool use, iteration strategy, and checker budgeting become part of the task itself.</li>
+                            <li>Failures become easier to interpret: symmetry collapse, composition drift, force-proxy misses, and bad revision workflows.</li>
+                        </ul>
+                    </div>
+                    <div class="md:max-w-xs bg-white/80 dark:bg-gray-900/60 border border-white/70 dark:border-gray-700 rounded-lg p-5">
+                        <h3 class="font-bold text-gray-900 dark:text-white mb-2">Standalone follow-on page</h3>
+                        <p class="text-sm text-gray-600 dark:text-gray-300 mb-4">
+                            I broke out the migration into its own page so the architecture change, eval results, and rollout examples can stand on their own.
+                        </p>
+                        <a href="../crystal_relaxation_multiturn_to_rlm_blog.html"
+                           class="inline-block bg-cyan-700 text-white px-5 py-3 rounded-lg font-semibold hover:bg-cyan-800 transition shadow-lg">
+                            Read the RLM transition &rarr;
+                        </a>
+                    </div>
+                </div>
             </div>
 
         </section>
