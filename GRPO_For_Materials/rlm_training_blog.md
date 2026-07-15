@@ -14,7 +14,7 @@ The migration made the task harder, but the traces became much more informative.
 
 ## Short version
 
-- RLM did not simply make the benchmark easier. The best corrected classic GPT-5.5 run still nearly saturated the short benchmark, with mean reward `0.998`.
+- RLM did not make the benchmark easier across the board. The best corrected classic GPT-5.5 run still nearly saturated the short benchmark, with mean reward `0.998`.
 - The best GPT-5.5 RLM eval reached mean reward `0.783` under a `15-turn / 5-check` budget, with `55/75` full-credit rollouts.
 - The first purpose of the experiments was viability: can a filesystem-and-checker formulation work at all for crystal relaxation?
 - The reason to try RLM was long-horizon agency: the model can manage context, operate on files, call tools, and learn from a responsive workspace.
@@ -75,7 +75,7 @@ The reference implementation I used for the RLM shape was Prime Intellect's [`rl
 
 ## Checker skill
 
-The checker skill is the bridge between the old feedback loop and the new agent workflow. In the classic environment, feedback arrived automatically after each model answer. In the RLM environment, the model has to decide when to ask for feedback, which candidate to check, and whether another revision is worth the remaining budget.
+The feedback from the old `MultiTurnEnv` becomes a skill that the agent can execute on its own. This makes the rollout more dynamic: instead of receiving fixed environment feedback after every attempt, the model has to decide when to call the skill, which candidate file to check, and how much of its remaining budget to spend on revision.
 
 The public checker takes a candidate CIF and returns diagnostic feedback:
 
@@ -89,11 +89,9 @@ candidate CIF
   -> feedback text
 ```
 
-The checker is public during the rollout, but it is supposed to be bounded. A `10-turn / 3-check` eval means the model can take at most 10 harness turns and has a budget of 3 checker calls. A `15-turn / 5-check` eval gives the same agent more room to search and revise. The final private scorer still runs after the rollout and reads `/task/final.cif`; the model does not get unlimited access to that private reward.
+The checker is public during the rollout, but it has to be bounded to make the comparison with `MultiTurnEnv` somewhat fair. A `10-turn / 3-check` eval means the model can take at most 10 harness turns and has a budget of 3 checker calls. A `15-turn / 5-check` eval gives the same agent more room to search and revise. The final private scorer still runs after the rollout and reads `/task/final.cif`; the model does not get unlimited access to that private reward.
 
-The check budget is important because a free checker changes the problem into brute-force local search. I wanted the model to learn a useful workflow, not simply spam validation calls until one candidate passed. Roughly, the early RLM budgets were chosen to match the spirit of the old multi-turn feedback setting: a few chances to inspect feedback, not an open-ended optimizer.
-
-The traces also exposed an implementation detail I need to tighten. Some audits show checker calls after the checker has already returned `CHECK BUDGET EXHAUSTED`. In practice, the skill tracked and reported exhaustion, but the surrounding loop still let later calls appear in the trace. I treat those traces as useful behavioral evidence, but stricter budget enforcement belongs in the next environment version.
+The check budget is important because a free checker changes the problem into brute-force local search. I wanted the model to learn a useful workflow, so the early RLM budgets were chosen to match the spirit of the old multi-turn feedback setting: a few chances to inspect feedback without turning the rollout into an open-ended optimizer.
 
 ## Prompt and scoring contract
 
@@ -111,9 +109,7 @@ During the rollout, the agent receives bounded public feedback through `check_st
 
 ## Metadata leak
 
-The first serious implementation bug was a data leak.
-
-In the previous dataset paradigm, each example had an `info` object. That object was useful for reward computation because it could hold metadata hidden from the model. When I moved to a filesystem task, I initially put too much of that metadata into the workspace.
+In the previous dataset paradigm, each example had an `info` object. That object was useful for reward computation because it could hold metadata hidden from the model. Mindlessly adding all the fields from the dataset to the filesystem suddenly made all information available to the agent, if it decided to look for it, and it loves looking for it. I quickly learned models take very seriously their environment/filesystem exploration stage.
 
 One leaked field was the original Materials Project id. The model noticed, tried to look up the material through the Materials Project API, and stopped behaving like a relaxation agent. It started behaving like a lookup agent.
 
@@ -121,7 +117,7 @@ The lesson was simple:
 
 > In an RLM environment, the filesystem is part of the prompt.
 
-Anything placed in the task directory should be treated as visible model context. Private scorer metadata has to stay private.
+Anything placed in the task directory should be treated as visible model context. Private scorer metadata has to stay private. I would not worry too much about unintended leaks; initial experiments will show unintended behavior when the model has access to information it should not have.
 
 ## RLM versus the classic environment
 
@@ -135,13 +131,15 @@ The comparison below uses GPT-5.5 because it was the strongest reference model i
 | Classic | [`16d858ab`](../rlm_transition_report.md) | GPT-5.5 | 25x3, 3 turns | `0.758` | `0.760` | `0.880` | Strong, but with model/API errors. |
 | RLM | [`60cf0943`](../outputs/rlm_eval_analysis/crystal-relaxation-rlm/multi_eval_report.html) | GPT-5.5 | 25x3, 15 / 5 | `0.783` | `0.733` | `0.760` | Best RLM run so far, 55/75 full-credit rollouts. |
 
-This is not a clean win/loss table because the surfaces test different things. Classic tests short direct repair. RLM tests tool-mediated scientific work. In the RLM setting, the model has to learn the harness, the filesystem, the tool contract, and then the chemistry.
+The table compares two different surfaces rather than a simple win/loss matchup. Classic tests short direct repair. RLM tests tool-mediated scientific work. In the RLM setting, the model has to learn the harness, the filesystem, the tool contract, and then the chemistry.
 
 My read is that the classic environment scores better in the shortest run because it is a different and friendlier task. Classic is still a useful solvability baseline, but it is not the place where I can see whether a model learns to manage a workspace.
 
 The extra interface burden is exactly why the traces are useful. Parser failures teach almost nothing. A failed low-energy search teaches something. If a rollout preserved composition and bond lengths but missed formation energy, I know where the policy is weak.
 
-The strongest evidence for keeping RLM is not that it beats the classic surface on every number. It does not. The evidence is that it measures the work loop I actually care about: read files, write code, ask for bounded feedback, revise a physical artifact, and leave an inspectable trace.
+RLM adds a learning curve because the model first has to learn the harness itself. Even with that overhead, the rollouts show that weaker LLMs can still do useful filesystem work: read files, write code, create new files, call skills, and manage intermediate artifacts.
+
+That is the main advantage over the classic environment for this project. In the classic loop, progress is mostly measured by the final score and by manually reading reasoning traces. That can bias the analysis toward reasoning that sounds right. In the RLM harness, I can also inspect what the model actually did: which files it opened, what code it ran, which candidates it wrote, when it checked them, and how those actions changed the final artifact.
 
 ## Budget sweep
 
@@ -173,7 +171,9 @@ The gif above is normalized by rollout count. It tracks how often frontier-model
 
 ## Training setup
 
-The training runs used the RLM environment rather than the old chat-shaped environment. The model was a 9B-scale policy trained on crystal relaxation rollouts with the filesystem, checker skill, and final-file contract exposed during training.
+The training runs used the RLM environment rather than the old chat-shaped environment. The model was Qwen3.5-9B, trained on crystal relaxation rollouts with the filesystem, checker skill, and final-file contract exposed during training.
+
+After a bit of experimentation, batch size became one of the first practical lessons. Below 128, the training signal was noisy enough to disrupt training, so I focused on batch sizes 128 and 256. Each rollout used a 10-turn budget with 2 checker calls allowed.
 
 The public reports do not record every optimizer detail I would want in a perfect methods section, so I am not going to invent them here. What the reports do show consistently is the behavior surface: each checkpoint audit has 64 parsed rollout samples, reward, tool-call counts, checker timing, candidate/checker events, primary behavior labels, error taxonomies, and matched tool-call excerpts.
 
@@ -197,7 +197,7 @@ The most meaningful single run for the first narrative is the batch-256-style ru
 
 The table gives the training story in miniature. Reward moved, but the workflow moved too. The model learned to get to the checker earlier, spend fewer calls on harness orientation, and combine candidate generation with checking in the same step.
 
-The surprising part was not any one of those metrics by itself. It was the combination. The model quickly moved toward a "learn by trying" strategy: less introduction, less wandering around the workspace, and more immediate attempts at candidate generation and checking. I connect this to the classic spaghetti-tower exercise, where children often outperform adults because they start testing structures sooner instead of spending the whole time planning.
+The interesting signal was the combination of those metrics. The model quickly moved toward a "learn by trying" strategy: less introduction, less wandering around the workspace, and more immediate attempts at candidate generation and checking. I connect this to the classic spaghetti-tower exercise, where children often outperform adults because they start testing structures sooner instead of spending the whole time planning.
 
 In this environment, that behavior is rational. If a rollout times out or gets truncated, it scores like a failed trajectory. So the model learns that long orientation phases are expensive. It narrows the workflow toward actions that produce feedback: write something, check it, revise it, and keep enough budget to leave a final artifact.
 
@@ -220,9 +220,9 @@ The error-mode plot is useful because it separates model workflow failures from 
 
 ## Real trace: generate, check, revise
 
-The behavior shift is easiest to see through a real trace. The example below is from the high-throughput `x7b6...` report, step 120, sample 15. It reached reward `1.0`, used the checker immediately, and then searched along a lattice-scaling direction while watching bond score, force proxy, and formation energy. This trace also shows the budget-enforcement looseness mentioned above: checker feedback reports exhaustion, but later checker calls are still present in the audit.
+The behavior shift is easiest to see through a real trace. The example below is from the high-throughput `x7b6...` report, step 120, sample 15. It reached reward `1.0`, used the checker immediately, and then searched along a lattice-scaling direction while watching bond score, force proxy, and formation energy.
 
-This is not an ideal scientific relaxation algorithm. It is a useful RLM trace because it shows the policy doing work inside the environment: read the CIF, generate a candidate, read checker feedback, revise the candidate, and finally choose the best tradeoff it found.
+The trace is still a crude scientific relaxation algorithm, but it is useful because it shows the policy doing work inside the environment: read the CIF, generate a candidate, read checker feedback, revise the candidate, and finally choose the best tradeoff it found.
 
 <details>
 <summary>Real rollout trace, condensed from report excerpts</summary>
@@ -304,7 +304,7 @@ Composition became learnable. Several models could preserve or recover compositi
 
 Bond lengths improved with budget and training. This often moved together with composition because both can be attacked through local geometry edits.
 
-Formation energy stayed hard. It was the main gate between partial credit and full credit, and it was the component least likely to be solved by simple formatting, coordinate wrapping, or conservative perturbation.
+Formation energy stayed hard as the main gate between partial credit and full credit, and simple formatting, coordinate wrapping, or conservative perturbation rarely solved it.
 
 Formation energy is the most interesting component because it is the genuinely scientific objective in this task. Format can be learned as a contract, composition can be protected by copying the right species, and bond lengths can often be improved through local cleanup. Formation energy asks whether the proposed structure is actually closer to a stable physical configuration, rather than whether it only looks like a valid CIF.
 
@@ -334,7 +334,7 @@ The figures below are the ones I would keep in the main body for the batch-256-s
 
 Different models got stuck at different rungs. GPT-5.5 could use extra checks to reach many full-credit structures. GPT-5.4-mini often reached the lower rungs but did not recover enough energy. Claude benefited from the larger budget but spent more turns. Gemini did not automatically improve when the budget grew.
 
-## Length and efficiency
+### Length and efficiency
 
 In the legacy `MultiTurnEnv` code, longer reasoning tended to appear only when the model scale was large enough and the problem was hard enough. The older 230B analysis showed richer and longer reasoning over training, while the 30B analysis showed the opposite pattern: reasoning compressed as the model learned safer heuristics.
 
@@ -354,13 +354,13 @@ For this reason, "make it shorter" is the wrong training objective by itself. Th
 
 For the main batch-256-style run, reward peaked around step 90 and then slightly declined by step 100. The useful interpretation is qualitative: the policy learned the workspace, then learned to exploit the checker, but formation energy remained the hard part.
 
-## Scheduler caveat
+### Scheduler caveat
 
 The later long runs add a scheduler caveat, but I would not make it a main conclusion. The high-throughput run reached about 500 in-flight rollouts and ended much stronger in the report data. The capped run sat near 200 in-flight rollouts, peaked earlier, and did not show the same sharp checker-timing shift.
 
-My current hypothesis is that rollout scheduling and sample age may affect the behavior curriculum, but it is not a controlled result yet. I would treat it as an operational clue, not as evidence that higher concurrency is inherently better.
+My current hypothesis is that rollout scheduling and sample age may affect the behavior curriculum. Since this was not a controlled result, I would treat it as an operational clue rather than evidence that higher concurrency is inherently better.
 
-## Why RLM mattered
+## Why RLM then?
 
 The old environment is still a good baseline. It is clean for short direct repair, and it showed that the task was solvable. But it did not expose the full work loop.
 
@@ -368,7 +368,7 @@ The RLM version trains and measures a different object: a model working inside a
 
 The most important outcome is that the RLM formulation made meaningful training possible at smaller scale. In the old `MultiTurnEnv` setup, interesting reasoning changes seemed to require at least roughly 30B-parameter models, and the 230B run was where richer scientific reasoning really emerged. With the filesystem, skill, and checker loop exposed as an RLM task, I could train a 9B-scale model and see it learn a workable scientific workflow.
 
-I do not read this as the 9B model solving crystal relaxation. I read it as the training signal moving to the right level. The model was no longer only learning how to emit a CIF-looking answer; it was learning how to operate in the workspace where the CIF is produced.
+My read is that the 9B result moved the training signal to the right level, even though the model did not solve crystal relaxation. The model was no longer only learning how to emit a CIF-looking answer; it was learning how to operate in the workspace where the CIF is produced.
 
 ## Next experiments
 

@@ -184,9 +184,8 @@
 
     .hero-figure img {
       width: 100%;
-      aspect-ratio: 4 / 3;
-      object-fit: cover;
-      background: var(--soft);
+      height: auto;
+      background: #fff;
     }
 
     .caption {
@@ -743,7 +742,7 @@
         <a href="#training">Training setup</a>
         <a href="#trace">Real trace</a>
         <a href="#components">Components</a>
-        <a href="#conclusion">Why RLM</a>
+        <a href="#conclusion">Why RLM then?</a>
         <a href="#artifacts">Artifacts</a>
       </aside>
 
@@ -758,7 +757,7 @@
           <p>The migration made the task harder, but the traces became much more informative. I could see whether the model was learning chemistry, file handling, checker use, Python debugging, or just the final artifact contract.</p>
           <h3>Short version</h3>
           <ul>
-            <li>RLM did not simply make the benchmark easier. The best corrected classic GPT-5.5 run still nearly saturated the short benchmark, with mean reward <code>0.998</code>.</li>
+            <li>RLM did not make the benchmark easier across the board. The best corrected classic GPT-5.5 run still nearly saturated the short benchmark, with mean reward <code>0.998</code>.</li>
             <li>The best GPT-5.5 RLM eval reached mean reward <code>0.783</code> under a <code>15-turn / 5-check</code> budget, with <code>55/75</code> full-credit rollouts.</li>
             <li>The first purpose of the experiments was viability: can a filesystem-and-checker formulation work at all for crystal relaxation?</li>
             <li>The reason to try RLM was long-horizon agency: the model can manage context, operate on files, call tools, and learn from a responsive workspace.</li>
@@ -810,7 +809,7 @@ ComposableEnv
         </section>
         <section id="skill">
           <h2>Checker skill</h2>
-          <p>The checker skill is the bridge between the old feedback loop and the new agent workflow. In the classic environment, feedback arrived automatically after each model answer. In the RLM environment, the model has to decide when to ask for feedback, which candidate to check, and whether another revision is worth the remaining budget.</p>
+          <p>The feedback from the old <code>MultiTurnEnv</code> becomes a skill that the agent can execute on its own. This makes the rollout more dynamic: instead of receiving fixed environment feedback after every attempt, the model has to decide when to call the skill, which candidate file to check, and how much of its remaining budget to spend on revision.</p>
           <p>The public checker takes a candidate CIF and returns diagnostic feedback:</p>
           <pre><code class="language-text">candidate CIF
   -&gt; parseable?
@@ -819,9 +818,8 @@ ComposableEnv
   -&gt; force proxy reasonable?
   -&gt; formation-energy proxy acceptable?
   -&gt; feedback text</code></pre>
-          <p>The checker is public during the rollout, but it is supposed to be bounded. A <code>10-turn / 3-check</code> eval means the model can take at most 10 harness turns and has a budget of 3 checker calls. A <code>15-turn / 5-check</code> eval gives the same agent more room to search and revise. The final private scorer still runs after the rollout and reads <code>/task/final.cif</code>; the model does not get unlimited access to that private reward.</p>
-          <p>The check budget is important because a free checker changes the problem into brute-force local search. I wanted the model to learn a useful workflow, not simply spam validation calls until one candidate passed. Roughly, the early RLM budgets were chosen to match the spirit of the old multi-turn feedback setting: a few chances to inspect feedback, not an open-ended optimizer.</p>
-          <p>The traces also exposed an implementation detail I need to tighten. Some audits show checker calls after the checker has already returned <code>CHECK BUDGET EXHAUSTED</code>. In practice, the skill tracked and reported exhaustion, but the surrounding loop still let later calls appear in the trace. I treat those traces as useful behavioral evidence, but stricter budget enforcement belongs in the next environment version.</p>
+          <p>The checker is public during the rollout, but it has to be bounded to make the comparison with <code>MultiTurnEnv</code> somewhat fair. A <code>10-turn / 3-check</code> eval means the model can take at most 10 harness turns and has a budget of 3 checker calls. A <code>15-turn / 5-check</code> eval gives the same agent more room to search and revise. The final private scorer still runs after the rollout and reads <code>/task/final.cif</code>; the model does not get unlimited access to that private reward.</p>
+          <p>The check budget is important because a free checker changes the problem into brute-force local search. I wanted the model to learn a useful workflow, so the early RLM budgets were chosen to match the spirit of the old multi-turn feedback setting: a few chances to inspect feedback without turning the rollout into an open-ended optimizer.</p>
         </section>
         <section id="prompt-and-scoring-contract">
           <h2>Prompt and scoring contract</h2>
@@ -833,12 +831,11 @@ ComposableEnv
         </section>
         <section id="metadata-leak">
           <h2>Metadata leak</h2>
-          <p>The first serious implementation bug was a data leak.</p>
-          <p>In the previous dataset paradigm, each example had an <code>info</code> object. That object was useful for reward computation because it could hold metadata hidden from the model. When I moved to a filesystem task, I initially put too much of that metadata into the workspace.</p>
+          <p>In the previous dataset paradigm, each example had an <code>info</code> object. That object was useful for reward computation because it could hold metadata hidden from the model. Mindlessly adding all the fields from the dataset to the filesystem suddenly made all information available to the agent, if it decided to look for it, and it loves looking for it. I quickly learned models take very seriously their environment/filesystem exploration stage.</p>
           <p>One leaked field was the original Materials Project id. The model noticed, tried to look up the material through the Materials Project API, and stopped behaving like a relaxation agent. It started behaving like a lookup agent.</p>
           <p>The lesson was simple:</p>
           <blockquote>In an RLM environment, the filesystem is part of the prompt.</blockquote>
-          <p>Anything placed in the task directory should be treated as visible model context. Private scorer metadata has to stay private.</p>
+          <p>Anything placed in the task directory should be treated as visible model context. Private scorer metadata has to stay private. I would not worry too much about unintended leaks; initial experiments will show unintended behavior when the model has access to information it should not have.</p>
         </section>
         <section id="comparison">
           <h2>RLM versus the classic environment</h2>
@@ -854,10 +851,11 @@ ComposableEnv
               </tbody>
             </table>
           </div>
-          <p>This is not a clean win/loss table because the surfaces test different things. Classic tests short direct repair. RLM tests tool-mediated scientific work. In the RLM setting, the model has to learn the harness, the filesystem, the tool contract, and then the chemistry.</p>
+          <p>The table compares two different surfaces rather than a simple win/loss matchup. Classic tests short direct repair. RLM tests tool-mediated scientific work. In the RLM setting, the model has to learn the harness, the filesystem, the tool contract, and then the chemistry.</p>
           <p>My read is that the classic environment scores better in the shortest run because it is a different and friendlier task. Classic is still a useful solvability baseline, but it is not the place where I can see whether a model learns to manage a workspace.</p>
           <p>The extra interface burden is exactly why the traces are useful. Parser failures teach almost nothing. A failed low-energy search teaches something. If a rollout preserved composition and bond lengths but missed formation energy, I know where the policy is weak.</p>
-          <p>The strongest evidence for keeping RLM is not that it beats the classic surface on every number. It does not. The evidence is that it measures the work loop I actually care about: read files, write code, ask for bounded feedback, revise a physical artifact, and leave an inspectable trace.</p>
+          <p>RLM adds a learning curve because the model first has to learn the harness itself. Even with that overhead, the rollouts show that weaker LLMs can still do useful filesystem work: read files, write code, create new files, call skills, and manage intermediate artifacts.</p>
+          <p>That is the main advantage over the classic environment for this project. In the classic loop, progress is mostly measured by the final score and by manually reading reasoning traces. That can bias the analysis toward reasoning that sounds right. In the RLM harness, I can also inspect what the model actually did: which files it opened, what code it ran, which candidates it wrote, when it checked them, and how those actions changed the final artifact.</p>
         </section>
         <section id="budget">
           <h2>Budget sweep</h2>
@@ -895,7 +893,8 @@ ComposableEnv
         </section>
         <section id="training">
           <h2>Training setup</h2>
-          <p>The training runs used the RLM environment rather than the old chat-shaped environment. The model was a 9B-scale policy trained on crystal relaxation rollouts with the filesystem, checker skill, and final-file contract exposed during training.</p>
+          <p>The training runs used the RLM environment rather than the old chat-shaped environment. The model was Qwen3.5-9B, trained on crystal relaxation rollouts with the filesystem, checker skill, and final-file contract exposed during training.</p>
+          <p>After a bit of experimentation, batch size became one of the first practical lessons. Below 128, the training signal was noisy enough to disrupt training, so I focused on batch sizes 128 and 256. Each rollout used a 10-turn budget with 2 checker calls allowed.</p>
           <p>The public reports do not record every optimizer detail I would want in a perfect methods section, so I am not going to invent them here. What the reports do show consistently is the behavior surface: each checkpoint audit has 64 parsed rollout samples, reward, tool-call counts, checker timing, candidate/checker events, primary behavior labels, error taxonomies, and matched tool-call excerpts.</p>
           <p>I looked at four reports:</p>
           <div class="table-wrap">
@@ -922,7 +921,7 @@ ComposableEnv
             </table>
           </div>
           <p>The table gives the training story in miniature. Reward moved, but the workflow moved too. The model learned to get to the checker earlier, spend fewer calls on harness orientation, and combine candidate generation with checking in the same step.</p>
-          <p>The surprising part was not any one of those metrics by itself. It was the combination. The model quickly moved toward a "learn by trying" strategy: less introduction, less wandering around the workspace, and more immediate attempts at candidate generation and checking. I connect this to the classic spaghetti-tower exercise, where children often outperform adults because they start testing structures sooner instead of spending the whole time planning.</p>
+          <p>The interesting signal was the combination of those metrics. The model quickly moved toward a "learn by trying" strategy: less introduction, less wandering around the workspace, and more immediate attempts at candidate generation and checking. I connect this to the classic spaghetti-tower exercise, where children often outperform adults because they start testing structures sooner instead of spending the whole time planning.</p>
           <p>In this environment, that behavior is rational. If a rollout times out or gets truncated, it scores like a failed trajectory. So the model learns that long orientation phases are expensive. It narrows the workflow toward actions that produce feedback: write something, check it, revise it, and keep enough budget to leave a final artifact.</p>
         </section>
         <section id="errors">
@@ -942,8 +941,8 @@ ComposableEnv
         </section>
         <section id="trace">
           <h2>Real trace: generate, check, revise</h2>
-          <p>The behavior shift is easiest to see through a real trace. The example below is from the high-throughput <code>x7b6...</code> report, step 120, sample 15. It reached reward <code>1.0</code>, used the checker immediately, and then searched along a lattice-scaling direction while watching bond score, force proxy, and formation energy. This trace also shows the budget-enforcement looseness mentioned above: checker feedback reports exhaustion, but later checker calls are still present in the audit.</p>
-          <p>This is not an ideal scientific relaxation algorithm. It is a useful RLM trace because it shows the policy doing work inside the environment: read the CIF, generate a candidate, read checker feedback, revise the candidate, and finally choose the best tradeoff it found.</p>
+          <p>The behavior shift is easiest to see through a real trace. The example below is from the high-throughput <code>x7b6...</code> report, step 120, sample 15. It reached reward <code>1.0</code>, used the checker immediately, and then searched along a lattice-scaling direction while watching bond score, force proxy, and formation energy.</p>
+          <p>The trace is still a crude scientific relaxation algorithm, but it is useful because it shows the policy doing work inside the environment: read the CIF, generate a candidate, read checker feedback, revise the candidate, and finally choose the best tradeoff it found.</p>
           <details>
           <summary>Real rollout trace, condensed from report excerpts</summary>
 
@@ -1015,7 +1014,7 @@ ComposableEnv
           <p>Format became easy. The file contract helped a lot because the final answer was a file, not a span of chat text.</p>
           <p>Composition became learnable. Several models could preserve or recover composition even when they failed the final score.</p>
           <p>Bond lengths improved with budget and training. This often moved together with composition because both can be attacked through local geometry edits.</p>
-          <p>Formation energy stayed hard. It was the main gate between partial credit and full credit, and it was the component least likely to be solved by simple formatting, coordinate wrapping, or conservative perturbation.</p>
+          <p>Formation energy stayed hard as the main gate between partial credit and full credit, and simple formatting, coordinate wrapping, or conservative perturbation rarely solved it.</p>
           <p>Formation energy is the most interesting component because it is the genuinely scientific objective in this task. Format can be learned as a contract, composition can be protected by copying the right species, and bond lengths can often be improved through local cleanup. Formation energy asks whether the proposed structure is actually closer to a stable physical configuration, rather than whether it only looks like a valid CIF.</p>
           <p>The figures below are the ones I would keep in the main body for the batch-256-style run: total reward, component rewards, and efficiency. They tell a cleaner story than a long list of scalar values in prose.</p>
           <figure class="figure">
@@ -1048,7 +1047,7 @@ ComposableEnv
           <p>Different models got stuck at different rungs. GPT-5.5 could use extra checks to reach many full-credit structures. GPT-5.4-mini often reached the lower rungs but did not recover enough energy. Claude benefited from the larger budget but spent more turns. Gemini did not automatically improve when the budget grew.</p>
         </section>
         <section id="length">
-          <h2>Length and efficiency</h2>
+          <h3>Length and efficiency</h3>
           <p>In the legacy <code>MultiTurnEnv</code> code, longer reasoning tended to appear only when the model scale was large enough and the problem was hard enough. The older 230B analysis showed richer and longer reasoning over training, while the 30B analysis showed the opposite pattern: reasoning compressed as the model learned safer heuristics.</p>
           <p>The RLM version gives a different lens on the same issue. Length includes more than prose: tool turns, scratch code, checker calls, and file operations all matter.</p>
           <p>The rough RLM pattern was:</p>
@@ -1063,16 +1062,16 @@ ComposableEnv
           <p>For the main batch-256-style run, reward peaked around step 90 and then slightly declined by step 100. The useful interpretation is qualitative: the policy learned the workspace, then learned to exploit the checker, but formation energy remained the hard part.</p>
         </section>
         <section id="scheduler-caveat">
-          <h2>Scheduler caveat</h2>
+          <h3>Scheduler caveat</h3>
           <p>The later long runs add a scheduler caveat, but I would not make it a main conclusion. The high-throughput run reached about 500 in-flight rollouts and ended much stronger in the report data. The capped run sat near 200 in-flight rollouts, peaked earlier, and did not show the same sharp checker-timing shift.</p>
-          <p>My current hypothesis is that rollout scheduling and sample age may affect the behavior curriculum, but it is not a controlled result yet. I would treat it as an operational clue, not as evidence that higher concurrency is inherently better.</p>
+          <p>My current hypothesis is that rollout scheduling and sample age may affect the behavior curriculum. Since this was not a controlled result, I would treat it as an operational clue rather than evidence that higher concurrency is inherently better.</p>
         </section>
         <section id="conclusion">
-          <h2>Why RLM mattered</h2>
+          <h2>Why RLM then?</h2>
           <p>The old environment is still a good baseline. It is clean for short direct repair, and it showed that the task was solvable. But it did not expose the full work loop.</p>
           <p>The RLM version trains and measures a different object: a model working inside a small scientific workspace. It must read files, write code, use a checker, revise artifacts, and leave a trace. This changed the project because wrong answers became inspectable.</p>
           <p>The most important outcome is that the RLM formulation made meaningful training possible at smaller scale. In the old <code>MultiTurnEnv</code> setup, interesting reasoning changes seemed to require at least roughly 30B-parameter models, and the 230B run was where richer scientific reasoning really emerged. With the filesystem, skill, and checker loop exposed as an RLM task, I could train a 9B-scale model and see it learn a workable scientific workflow.</p>
-          <p>I do not read this as the 9B model solving crystal relaxation. I read it as the training signal moving to the right level. The model was no longer only learning how to emit a CIF-looking answer; it was learning how to operate in the workspace where the CIF is produced.</p>
+          <p>My read is that the 9B result moved the training signal to the right level, even though the model did not solve crystal relaxation. The model was no longer only learning how to emit a CIF-looking answer; it was learning how to operate in the workspace where the CIF is produced.</p>
         </section>
         <section id="next-experiments">
           <h2>Next experiments</h2>
