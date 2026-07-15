@@ -530,11 +530,19 @@
     }
 
     p code,
-    li code {
+    li code,
+    td code,
+    th code {
       padding: 2px 5px;
       border-radius: 4px;
       background: var(--soft);
       color: #27303a;
+    }
+
+    pre code {
+      padding: 0;
+      background: transparent;
+      color: inherit;
     }
 
     ul,
@@ -708,7 +716,7 @@
           <p class="eyebrow">Scientific diary / implementation report</p>
           <h1>Training RLMs to Relax Crystals</h1>
           <p class="dek">
-            Crystal relaxation moved from a chat loop into a filesystem. The model had to act like a small scientific agent. Inspect files. Write code. Call a checker. Leave a final CIF behind.
+            Crystal relaxation moved from a chat loop into a filesystem. The model had to act like a small scientific agent: inspect files, write code, call a checker, revise candidates, and leave a final CIF behind.
           </p>
           <div class="hero-meta">
             <span class="pill">RLM environment</span>
@@ -727,50 +735,65 @@
     <div class="layout">
       <aside class="toc" aria-label="Table of contents">
         <strong>Sections</strong>
-        <a href="#question">Question</a>
-        <a href="#migration">From MultiTurnEnv to RLM</a>
-        <a href="#skill">Checker skill</a>
-        <a href="#bug">Metadata leak</a>
-        <a href="#evals">Baselines and evals</a>
-        <a href="#training">Training diary</a>
-        <a href="#length">Length and efficiency</a>
-        <a href="#failures">Failure modes</a>
-        <a href="#conclusion">Conclusion</a>
+        <a href="#intro">Setup</a>
+        <a href="#migration">Migration</a>
+        <a href="#skill">Checker</a>
+        <a href="#comparison">Classic vs RLM</a>
+        <a href="#budget">Budget sweep</a>
+        <a href="#training">Training setup</a>
+        <a href="#trace">Real trace</a>
+        <a href="#components">Components</a>
+        <a href="#conclusion">Why RLM</a>
+        <a href="#artifacts">Artifacts</a>
       </aside>
 
       <article>
-        <section id="question">
-          <p class="section-kicker">Opening question</p>
-          <p>Writing about RL has too many entry points.</p>
-          <p>You can write about gradients, losses, advantages, and updates. You can write about the model. Did it learn? What did it learn? How did it learn?</p>
-          <p>The middle level is the useful one here. The model reads files. It writes code. It calls a checker. It revises a CIF. It decides when to stop.</p>
-          <div class="lead-question">What does an LLM actually learn when we train it to relax crystals through a filesystem?</div>
-          <p>The RLM setup made crystal relaxation more agentic. It made the task easier to inspect. It did not make the physics easy. The model learned the workspace. The traces exposed the failures. Formation energy stayed hard.</p>
+        <section id="intro">
+          <h2>Setup</h2>
+          <p>This post is about moving my crystal relaxation environment from a classic multi-turn chat loop into an RLM-style filesystem task. The original project is here: <a href="blog_post.html">Agentic Pipeline for Crystal Relaxation</a>. In that environment, the model receives an unrelaxed crystal structure, proposes a relaxed CIF, gets feedback, and tries again.</p>
+          <p>I made this move because RLMs are a better fit for long-horizon work than a conventional multi-turn environment. In a chat loop, the environment keeps pulling the model back into the same answer-feedback-answer rhythm. In an RLM harness, the agent manages more of its own context, decides when to inspect files or use tools, and works in a responsive environment instead of only producing text.</p>
+          <p>The workspace becomes part of the task. Files are read, scratch code is written, candidates are checked, and each observation affects the next move.</p>
+          <p>Crystal relaxation is a good stress test for this because it combines three things I care about. It is a hard scientific problem with useful intermediate goals, it represents a 3D object through a text format, and it is not yet a fully explored RL setting. A model can preserve the chemical formula and still fail because atoms are too close, the bond network is broken, the formation energy is too high, or the workflow never reaches a useful final candidate.</p>
+          <p>The RLM version changed what I was training. The model no longer just answered in chat. It worked inside a small filesystem, inspected <code>input.cif</code>, wrote code, called a checker skill, revised candidate files, and left its final answer at <code>/task/final.cif</code>.</p>
+          <p>The migration made the task harder, but the traces became much more informative. I could see whether the model was learning chemistry, file handling, checker use, Python debugging, or just the final artifact contract.</p>
+          <h3>Short version</h3>
+          <ul>
+            <li>RLM did not simply make the benchmark easier. The best corrected classic GPT-5.5 run still nearly saturated the short benchmark, with mean reward <code>0.998</code>.</li>
+            <li>The best GPT-5.5 RLM eval reached mean reward <code>0.783</code> under a <code>15-turn / 5-check</code> budget, with <code>55/75</code> full-credit rollouts.</li>
+            <li>The first purpose of the experiments was viability: can a filesystem-and-checker formulation work at all for crystal relaxation?</li>
+            <li>The reason to try RLM was long-horizon agency: the model can manage context, operate on files, call tools, and learn from a responsive workspace.</li>
+            <li>The answer was yes, and the trace data is the reason it matters. Early rollouts wasted turns reading the workspace and writing brittle Python; later rollouts checked earlier, used fewer broken tool calls, and packed candidate generation plus checking into the same work step.</li>
+            <li>The big scientific bottleneck did not disappear. Format, composition, and local geometry were easier than formation energy.</li>
+            <li>The most important practical change was scale. In the old <code>MultiTurnEnv</code> setup, interesting reasoning changes seemed to require much larger models; with the filesystem, skill, and checker loop exposed as an RLM task, I could train a 9B-scale model and watch a workable scientific workflow emerge.</li>
+          </ul>
         </section>
-
         <section id="migration">
           <h2>From MultiTurnEnv to RLM</h2>
-          <p>The original crystal relaxation environment was a classic <code>MultiTurnEnv</code>. The model received an unrelaxed crystal structure. It proposed a relaxed version. The environment gave feedback. The model tried again. That worked. It also forced a chat-shaped rhythm: answer, feedback, answer, feedback.</p>
-          <p>The RLM version changes the unit of work. A task is a small filesystem with an <code>input.cif</code>, skills, a sandbox, and a required <code>/task/final.cif</code>.</p>
+          <p>The old environment was a classic <code>MultiTurnEnv</code>: the environment owned the loop, injected feedback after model answers, parsed a final CIF out of the conversation, and scored the result. That setup was useful because it was direct and cheap, but it also meant the task was shaped like a chat protocol rather than like a scientific workspace.</p>
+          <p>The RLM version makes two separate changes that are easy to confuse.</p>
+          <p>First, I moved the environment into the newer Verifiers v1 taskset style. The taskset owns the dataset slice, per-example metadata, and the files mounted into each task. That is where the language of "tasksets" comes from: instead of thinking about a single prompt row, the environment constructs a task instance with an input file, private scorer metadata, and a known final-answer path.</p>
+          <p>Second, I wrapped that taskset in the RLM harness. The harness owns the agent workflow: the system prompt, the tool surface, the long-lived IPython control loop, the skills directory, the turn budget, and the final-file contract. The model can inspect files, run code, call installed skills, and decide when it has enough signal to write <code>/task/final.cif</code>.</p>
+          <p>Those two moves come together like this:</p>
+          <pre><code class="language-text">Taskset
+  owns the data slice, private metadata, and task files
 
-          <div class="unit-comparison">
-            <div class="comparison-panel">
-              <h3>Dataset row</h3>
-              <div class="table-wrap">
-                <table class="mini-table">
-                  <thead>
-                    <tr><th>id</th><th>prompt</th><th>info</th><th>solution</th></tr>
-                  </thead>
-                  <tbody>
-                    <tr><td><code>mp-690760</code></td><td>Relax this crystal structure.</td><td><code>{unrelaxed_cif, composition, target_energy}</code></td><td><code>relaxed_cif</code></td></tr>
-                    <tr><td><code>mp-976260</code></td><td>Return a lower-energy CIF.</td><td><code>{mp_id, cluster, reference_metrics}</code></td><td><code>relaxed_cif</code></td></tr>
-                  </tbody>
-                </table>
-              </div>
-            </div>
-            <div class="comparison-panel">
-              <h3>Taskset question</h3>
-              <pre class="tree-pre">/task
+RLM harness
+  owns the system prompt, tools, skills, and work loop
+
+ComposableEnv
+  orchestrates rollouts, sandboxes, scoring, and logging</code></pre>
+          <p>The old task looked like a dataset row:</p>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>id</th><th>prompt</th><th>hidden info</th><th>solution</th></tr></thead>
+              <tbody>
+                <tr><td><code>mp-690760</code></td><td>Relax this crystal structure.</td><td><code>{unrelaxed_cif, composition, target_energy}</code></td><td><code>relaxed_cif</code></td></tr>
+                <tr><td><code>mp-976260</code></td><td>Return a lower-energy CIF.</td><td><code>{mp_id, cluster, reference_metrics}</code></td><td><code>relaxed_cif</code></td></tr>
+              </tbody>
+            </table>
+          </div>
+          <p>The new task looks like a filesystem:</p>
+          <pre><code class="language-text">/task
 |-- prompt.txt
 |-- inputs
 |   `-- input.cif
@@ -781,407 +804,310 @@
 |-- workdir
 |   |-- candidate.cif
 |   `-- scratch.py
-`-- final.cif</pre>
-            </div>
-          </div>
-
-          <div class="diagram" role="img" aria-label="RLM environment architecture diagram">
-            <div class="diagram-row">
-              <div class="diagram-cell"><strong>Taskset</strong><span>Owns the data slice, per-example files, and task identity.</span></div>
-              <div class="diagram-cell"><strong>Filesystem</strong><span>Exposes <code>input.cif</code>, workspace state, and final artifact paths.</span></div>
-              <div class="diagram-cell"><strong>Harness</strong><span>Defines the prompt, tools, and how the agent is allowed to work.</span></div>
-              <div class="diagram-cell"><strong>Checker</strong><span>Turns candidate CIFs into public feedback and reward-relevant diagnostics.</span></div>
-              <div class="diagram-cell"><strong>Scorer</strong><span>Reads <code>final.cif</code> and computes format, composition, geometry, and energy rewards.</span></div>
-            </div>
-          </div>
-
-          <p>The old setup tested short repair. Emit a plausible CIF. Read feedback. Try again. The RLM setup tests agent work. Inspect the input. Use Python. Call a checker. Revise a candidate. Converge on a better structure.</p>
-
-          <h3>RLM search</h3>
-          <p>Prime Intellect's <a href="https://github.com/PrimeIntellect-ai/research-environments/tree/main/environments/rlm_search"><code>rlm_search</code> environment</a> was the useful reference. Same pattern. Different domain. It runs web search and research tasks instead of crystal relaxation. The taskset can switch between QUEST, OpenSeeker, and REDSearcher. The model gets local skills such as <code>websearch</code> and <code>open_webpage</code>. The answer goes to <code>/task/answer.txt</code>. The scorer reads the file.</p>
-          <p>The implementation is small and clarifying. <code>load_environment</code> builds a search taskset. It attaches the bundled skills directory. It appends the final-answer file contract to the system prompt. It creates an <code>rlm_harness</code>. It wraps everything in a <code>ComposableEnv</code>. The selected taskset owns scoring. The harness owns the sandbox workflow. My crystal environment follows the same shape: taskset owns files, harness owns work, scorer reads the final artifact.</p>
-
-          <h3>RLM harness</h3>
-          <p>The <a href="https://github.com/PrimeIntellect-ai/rlm-harness">RLM harness</a> is deliberately narrow. It is a training harness for agentic rollouts. It is not a general chat UI. The model gets a long-lived IPython control surface as its built-in tool. From there it can read and write files, run shell commands through explicit bash cells, call installed skills, and optionally spawn recursive sub-agents when recursion is enabled.</p>
-          <p>At runtime, the harness builds a system prompt from the working directory, session log path, installed skills, recursion setting, and active tool set. Then it runs a simple loop. Call the model. Allow one built-in tool call. Execute it. Append the observation. Log the turn. Repeat until the model stops or hits budget. Every run writes a session directory with metadata, messages, tool results, and child sessions. That trace made the crystal experiments inspectable.</p>
+`-- final.cif</code></pre>
+          <p>The difference matters because the model can now do real agent work. It can read the input, write a scratch script, compute distances, generate a candidate CIF, ask the checker for public feedback, revise the file, and only then write the final artifact.</p>
+          <p>The reference implementation I used for the RLM shape was Prime Intellect's <a href="https://github.com/PrimeIntellect-ai/research-environments/tree/main/environments/rlm_search"><code>rlm_search</code> environment</a>. The domain is unrelated, but the architecture is the same: taskset owns examples, harness owns the sandbox workflow, and the scorer reads a final file. For search, the final file is <code>/task/answer.txt</code>; for crystal relaxation, it is <code>/task/final.cif</code>.</p>
         </section>
-
         <section id="skill">
           <h2>Checker skill</h2>
-          <p>The main implementation step was translating the old <code>MultiTurnEnv</code> feedback function into a skill. In the old environment, feedback was automatic. After every model answer, the environment returned a score and diagnostic text. In the RLM environment, the model has to decide when to ask for that feedback.</p>
-          <pre>candidate CIF -> check_structure -> parseable?
-                              -> composition correct?
-                              -> bond lengths reasonable?
-                              -> formation energy acceptable?
-                              -> force proxy reasonable?
-                              -> feedback text</pre>
-          <p>The checker gave the model agency. It also created a control problem. A free checker becomes an infinite checker. So I added a check budget. Roughly, two old feedback turns became two allowed RLM checks.</p>
-          <p>The wording of the skill is a hyperparameter. If the skill encourages broad exploration, the model explores. If it makes the checker feel central, the model checks earlier. The tool changes the policy we train.</p>
+          <p>The checker skill is the bridge between the old feedback loop and the new agent workflow. In the classic environment, feedback arrived automatically after each model answer. In the RLM environment, the model has to decide when to ask for feedback, which candidate to check, and whether another revision is worth the remaining budget.</p>
+          <p>The public checker takes a candidate CIF and returns diagnostic feedback:</p>
+          <pre><code class="language-text">candidate CIF
+  -&gt; parseable?
+  -&gt; composition correct?
+  -&gt; bond lengths reasonable?
+  -&gt; force proxy reasonable?
+  -&gt; formation-energy proxy acceptable?
+  -&gt; feedback text</code></pre>
+          <p>The checker is public during the rollout, but it is supposed to be bounded. A <code>10-turn / 3-check</code> eval means the model can take at most 10 harness turns and has a budget of 3 checker calls. A <code>15-turn / 5-check</code> eval gives the same agent more room to search and revise. The final private scorer still runs after the rollout and reads <code>/task/final.cif</code>; the model does not get unlimited access to that private reward.</p>
+          <p>The check budget is important because a free checker changes the problem into brute-force local search. I wanted the model to learn a useful workflow, not simply spam validation calls until one candidate passed. Roughly, the early RLM budgets were chosen to match the spirit of the old multi-turn feedback setting: a few chances to inspect feedback, not an open-ended optimizer.</p>
+          <p>The traces also exposed an implementation detail I need to tighten. Some audits show checker calls after the checker has already returned <code>CHECK BUDGET EXHAUSTED</code>. In practice, the skill tracked and reported exhaustion, but the surrounding loop still let later calls appear in the trace. I treat those traces as useful behavioral evidence, but stricter budget enforcement belongs in the next environment version.</p>
         </section>
-
-        <section>
-          <h2>Prompt contract</h2>
-          <p>The system prompt is shared across tasks. The task family is shared too: start with an unrelaxed structure and produce a relaxed one. The individual question can stay generic. The per-example information lives in <code>input.cif</code>. The prompt does not need every detail. The filesystem does.</p>
-          <pre>write the best candidate structure to /task/final.cif</pre>
-          <p>That removes a whole class of answer-extraction problems. No CIF extraction from chat. No tag parsing. No prose cleanup. The artifact is the answer.</p>
-          <p>One scaling detail matters. The expensive final reward does not require a full scoring model inside every rollout sandbox. The model writes <code>/task/final.cif</code>. The rollout stops. The environment keeps the sandbox alive long enough for scoring to read the file and run the private checker path. In code, this is <code>keep_sandbox_for_scoring=True</code>. The sandbox is the artifact container. It is not a replicated model host.</p>
-          <p>During the rollout, the agent gets bounded public feedback through the checker skill. After the rollout, final scoring uses the hosted formation-energy model once, centrally, against the saved final CIF. That keeps RLM training scalable. Thousands of sandboxes can hold files and run lightweight tools. The heavier model-backed reward is paid only at the end of each trajectory.</p>
+        <section id="prompt-and-scoring-contract">
+          <h2>Prompt and scoring contract</h2>
+          <p>The prompt can stay short because the filesystem carries the task details. Every example starts with an unrelaxed <code>input.cif</code>, and every rollout has the same final contract:</p>
+          <pre><code class="language-text">write the best candidate structure to /task/final.cif</code></pre>
+          <p>That removes a whole class of answer-extraction problems. There is no CIF extraction from prose, no tag parsing, and no final answer cleanup. The grader reads a file.</p>
+          <p>One scaling detail mattered a lot. The expensive final reward does not need to run inside every rollout sandbox while the model is acting. The rollout sandbox only has to keep the final artifact alive long enough for scoring. In code, this is the point of <code>keep_sandbox_for_scoring=True</code>: the model writes <code>/task/final.cif</code>, the rollout stops, and the environment reads that file for private scoring.</p>
+          <p>During the rollout, the agent receives bounded public feedback through <code>check_structure</code>. After the rollout, the private scorer computes the full reward, including the heavier formation-energy signal. That keeps training feasible because thousands of sandboxes can hold files and run lightweight tools, while the more expensive reward is paid once per trajectory.</p>
         </section>
-
-        <section id="bug">
+        <section id="metadata-leak">
           <h2>Metadata leak</h2>
-          <div class="callout warning">
-            <p><strong>Lesson:</strong> in an RLM environment, the filesystem is part of the prompt.</p>
-          </div>
-          <p>The first serious implementation bug was a data leak. In the previous dataset paradigm, each example had an <code>info</code> object. It was useful for reward computation because it could hold metadata hidden from the model. When I moved to a filesystem task, I initially included too much of that metadata in the workspace.</p>
-          <p>One leaked field was the original Materials Project id. The model noticed. It tried to look up the material through the Materials Project API. It stopped behaving like a relaxation agent. It started behaving like a lookup agent.</p>
+          <p>The first serious implementation bug was a data leak.</p>
+          <p>In the previous dataset paradigm, each example had an <code>info</code> object. That object was useful for reward computation because it could hold metadata hidden from the model. When I moved to a filesystem task, I initially put too much of that metadata into the workspace.</p>
+          <p>One leaked field was the original Materials Project id. The model noticed, tried to look up the material through the Materials Project API, and stopped behaving like a relaxation agent. It started behaving like a lookup agent.</p>
+          <p>The lesson was simple:</p>
+          <blockquote>In an RLM environment, the filesystem is part of the prompt.</blockquote>
           <p>Anything placed in the task directory should be treated as visible model context. Private scorer metadata has to stay private.</p>
         </section>
-
-        <section id="evals">
-          <h2>Baselines</h2>
-          <p>Before training, I needed to know whether the RLM version was viable at all. The answer was yes. The caveat was large. Classic stayed easier in short runs. It gives feedback in a tight, controlled loop. Strong frontier models can nearly saturate it.</p>
-          <div class="metric-row">
-            <div class="metric"><span class="value">0.998</span><span class="label">Best corrected classic GPT-5.5 mean reward.</span></div>
-            <div class="metric"><span class="value">0.783</span><span class="label">Best GPT-5.5 RLM mean reward under 15 turns / 5 checks.</span></div>
-            <div class="metric"><span class="value">55/75</span><span class="label">Full-credit rollouts in the best RLM run.</span></div>
-            <div class="metric"><span class="value">0.733</span><span class="label">RLM pass@1 for GPT-5.5 at the larger budget.</span></div>
-          </div>
-
+        <section id="comparison">
+          <h2>RLM versus the classic environment</h2>
+          <p>The first experiment question was viability: could the RLM version work at all for crystal relaxation? The answer was yes, with an important caveat. The classic environment remained easier in short runs because it gives feedback in a tight, controlled chat loop.</p>
+          <p>The comparison below uses GPT-5.5 because it was the strongest reference model in both surfaces. Each eval used 25 examples with 3 rollouts per example. The RLM budgets are written as <code>turns / checks</code>, so <code>15 / 5</code> means at most 15 harness turns and 5 checker calls.</p>
           <div class="table-wrap">
             <table>
-              <thead>
-                <tr><th>Surface</th><th>Model</th><th>Run shape</th><th class="num">Mean reward</th><th class="num">pass@1</th><th class="num">pass@2</th><th>Notes</th></tr>
-              </thead>
+              <thead><tr><th>Surface</th><th>Eval</th><th>Model</th><th>Run shape</th><th>Mean reward</th><th>pass@1</th><th>pass@2</th><th>Notes</th></tr></thead>
               <tbody>
-                <tr><td>Classic</td><td>GPT-5.5</td><td>25x3</td><td class="num">0.998</td><td class="num">1.000</td><td class="num">1.000</td><td>Best corrected classic run.</td></tr>
-                <tr><td>Classic</td><td>GPT-5.5</td><td>25x3, 3 turns</td><td class="num">0.758</td><td class="num">0.760</td><td class="num">0.880</td><td>Strong with 32% model/API errors.</td></tr>
-                <tr><td>RLM</td><td>GPT-5.5</td><td>25x3, 15 turns, 5 checks</td><td class="num">0.783</td><td class="num">0.733</td><td class="num">0.760</td><td>Best RLM run so far, 55/75 full-credit rollouts.</td></tr>
+                <tr><td>Classic</td><td><a href="../rlm_transition_report.md"><code>8962a2f4</code></a></td><td>GPT-5.5</td><td>25x3</td><td><code>0.998</code></td><td><code>1.000</code></td><td><code>1.000</code></td><td>Best corrected classic run.</td></tr>
+                <tr><td>Classic</td><td><a href="../rlm_transition_report.md"><code>16d858ab</code></a></td><td>GPT-5.5</td><td>25x3, 3 turns</td><td><code>0.758</code></td><td><code>0.760</code></td><td><code>0.880</code></td><td>Strong, but with model/API errors.</td></tr>
+                <tr><td>RLM</td><td><a href="../outputs/rlm_eval_analysis/crystal-relaxation-rlm/multi_eval_report.html"><code>60cf0943</code></a></td><td>GPT-5.5</td><td>25x3, 15 / 5</td><td><code>0.783</code></td><td><code>0.733</code></td><td><code>0.760</code></td><td>Best RLM run so far, 55/75 full-credit rollouts.</td></tr>
               </tbody>
             </table>
           </div>
-
-          <p>Classic tests short direct repair. RLM tests tool-mediated scientific work. Early RLM looks worse for a simple reason. The model has two jobs. Learn the harness. Learn the filesystem. Learn the tools and final-file contract. Then solve the chemistry. Classic removes much of that interface burden by giving feedback in the same chat loop every time.</p>
-          <p>That matters for training. Parser failures teach almost nothing. A failed low-energy search teaches something. If the model preserved composition and bond lengths, I know where the policy is weak.</p>
-
-          <h3>Budget and infrastructure</h3>
-          <div class="table-wrap">
-            <table>
-              <thead>
-                <tr><th>Eval</th><th>Budget</th><th class="num">Mean reward</th><th class="num">pass@1</th><th class="num">pass@2</th><th class="num">Full credit</th><th>Interpretation</th></tr>
-              </thead>
-              <tbody>
-                <tr><td><code>45491238</code></td><td>5 turns / 1 check</td><td class="num">0.618</td><td class="num">0.493</td><td class="num">0.587</td><td class="num">37/75</td><td>Strong short-budget RLM reference.</td></tr>
-                <tr><td><code>003b7c4d</code></td><td>10 turns / 3 checks</td><td class="num">0.341</td><td class="num">0.240</td><td class="num">0.347</td><td class="num">n/a</td><td>Dependency/interpreter path issue.</td></tr>
-                <tr><td><code>34ff5575</code></td><td>10 turns / 3 checks</td><td class="num">0.516</td><td class="num">0.440</td><td class="num">0.520</td><td class="num">33/75</td><td>Cleaner dependency path.</td></tr>
-                <tr><td><code>60cf0943</code></td><td>15 turns / 5 checks</td><td class="num">0.783</td><td class="num">0.733</td><td class="num">0.760</td><td class="num">55/75</td><td>Best RLM result so far.</td></tr>
-              </tbody>
-            </table>
-          </div>
-
-          <p>At first, the larger trusted-image run looked like a regression. The later non-trusted rerun changed the story. More turns were not the problem. Once the dependency path was clean, increasing from 10 turns / 3 checks to 15 turns / 5 checks helped GPT-5.5 a lot.</p>
-
-          <h3>Cross-model</h3>
-          <div class="table-wrap">
-            <table>
-              <thead>
-                <tr><th>Model</th><th class="num">10/3 mean</th><th class="num">15/5 mean</th><th class="num">Delta</th><th>What changed</th></tr>
-              </thead>
-              <tbody>
-                <tr><td>GPT-5.5</td><td class="num">0.516</td><td class="num">0.783</td><td class="num">+0.267</td><td>Converted extra checks into full-credit structures.</td></tr>
-                <tr><td>GPT-5.4-mini</td><td class="num">0.376</td><td class="num">0.408</td><td class="num">+0.032</td><td>Reliable format/composition, weak energy recovery.</td></tr>
-                <tr><td>Gemini 2.5 Flash</td><td class="num">0.297</td><td class="num">0.259</td><td class="num">-0.038</td><td>More budget did not improve composition or energy.</td></tr>
-                <tr><td>Claude Haiku 4.5</td><td class="num">0.303</td><td class="num">0.454</td><td class="num">+0.151</td><td>Benefited from budget. Used many turns.</td></tr>
-              </tbody>
-            </table>
-          </div>
-
-          <figure class="figure">
-            <h3>Candidate plus checker</h3>
-            <img src="../blog_assets/rlm_results/eval-candidate-check-normalized.gif" alt="Normalized candidate plus checker same-call histogram across RLM frontier evals">
-            <figcaption class="caption">The plot is normalized by rollout count. Stronger RLM evals tend to generate and check earlier.</figcaption>
-          </figure>
+          <p>This is not a clean win/loss table because the surfaces test different things. Classic tests short direct repair. RLM tests tool-mediated scientific work. In the RLM setting, the model has to learn the harness, the filesystem, the tool contract, and then the chemistry.</p>
+          <p>My read is that the classic environment scores better in the shortest run because it is a different and friendlier task. Classic is still a useful solvability baseline, but it is not the place where I can see whether a model learns to manage a workspace.</p>
+          <p>The extra interface burden is exactly why the traces are useful. Parser failures teach almost nothing. A failed low-energy search teaches something. If a rollout preserved composition and bond lengths but missed formation energy, I know where the policy is weak.</p>
+          <p>The strongest evidence for keeping RLM is not that it beats the classic surface on every number. It does not. The evidence is that it measures the work loop I actually care about: read files, write code, ask for bounded feedback, revise a physical artifact, and leave an inspectable trace.</p>
         </section>
-
+        <section id="budget">
+          <h2>Budget sweep</h2>
+          <p>The most useful eval sequence was the GPT-5.5 budget and sandbox sweep. The <code>003b7c4d</code> run looked worse than the shorter baseline, but that turned out to be a dependency/interpreter path issue in the trusted image. The cleaner non-trusted reruns showed the intended pattern: more budget helped GPT-5.5 substantially.</p>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>Eval</th><th>Budget</th><th>Mean reward</th><th>pass@1</th><th>pass@2</th><th>Full credit</th><th>Interpretation</th></tr></thead>
+              <tbody>
+                <tr><td><a href="../outputs/rlm_eval_analysis/crystal-relaxation-rlm/multi_eval_report.html"><code>45491238</code></a></td><td>5 turns / 1 check</td><td><code>0.618</code></td><td><code>0.493</code></td><td><code>0.587</code></td><td>37/75</td><td>Strong short-budget RLM reference.</td></tr>
+                <tr><td><a href="../outputs/rlm_eval_analysis/crystal-relaxation-rlm/multi_eval_report.html"><code>003b7c4d</code></a></td><td>10 turns / 3 checks</td><td><code>0.341</code></td><td><code>0.240</code></td><td><code>0.347</code></td><td>n/a</td><td>Dependency/interpreter path issue.</td></tr>
+                <tr><td><a href="../outputs/rlm_eval_analysis/crystal-relaxation-rlm/multi_eval_report.html"><code>34ff5575</code></a></td><td>10 turns / 3 checks</td><td><code>0.516</code></td><td><code>0.440</code></td><td><code>0.520</code></td><td>33/75</td><td>Cleaner dependency path.</td></tr>
+                <tr><td><a href="../outputs/rlm_eval_analysis/crystal-relaxation-rlm/multi_eval_report.html"><code>60cf0943</code></a></td><td>15 turns / 5 checks</td><td><code>0.783</code></td><td><code>0.733</code></td><td><code>0.760</code></td><td>55/75</td><td>Best RLM result so far.</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <p>Once the dependency path was clean, increasing from <code>10 / 3</code> to <code>15 / 5</code> moved mean reward from <code>0.516</code> to <code>0.783</code> and full-credit rollouts from <code>33/75</code> to <code>55/75</code>.</p>
+          <p>Across models, the larger budget helped unevenly:</p>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>Model</th><th>10 / 3 mean</th><th>15 / 5 mean</th><th>Delta</th><th>What changed</th></tr></thead>
+              <tbody>
+                <tr><td>GPT-5.5</td><td><code>0.516</code></td><td><code>0.783</code></td><td><code>+0.267</code></td><td>Converted extra checks into full-credit structures.</td></tr>
+                <tr><td>GPT-5.4-mini</td><td><code>0.376</code></td><td><code>0.408</code></td><td><code>+0.032</code></td><td>Reliable format/composition, weak energy recovery.</td></tr>
+                <tr><td>Gemini 2.5 Flash</td><td><code>0.297</code></td><td><code>0.259</code></td><td><code>-0.038</code></td><td>More budget did not improve composition or energy.</td></tr>
+                <tr><td>Claude Haiku 4.5</td><td><code>0.303</code></td><td><code>0.454</code></td><td><code>+0.151</code></td><td>Benefited from budget but used many turns.</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <p>The aggregate reward hides the main story. GPT-5.4-mini learned the easy contract: write a valid file, preserve composition, and usually avoid obvious geometry violations. Formation energy stayed weak. Claude showed the opposite useful signal: more budget helped, but the work was expensive in turns. Gemini showed that a larger workspace budget only helps if the model knows how to spend it.</p>
+          <figure class="figure">
+            <img src="../blog_assets/rlm_results/eval-candidate-check-normalized.gif" alt="Frontier eval candidate/checker behavior">
+            <figcaption class="caption">Frontier eval candidate/checker behavior</figcaption>
+          </figure>
+          <p>The gif above is normalized by rollout count. It tracks how often frontier-model rollouts combine candidate generation with checker use in the same work step. That matters because a productive RLM rollout usually stops treating checking as a final afterthought and starts using it as part of the revision loop.</p>
+        </section>
         <section id="training">
-          <h2>Training diary</h2>
-          <p>The training runs are where the RLM setup became most interesting. The batch-128 run peaked around step <code>70</code>. The batch-256 run peaked around step <code>90</code>, with mean reward around <code>0.527</code>.</p>
-          <p>Reward moved. Workflow moved too.</p>
-
-          <h3>Training reports</h3>
-          <p>Start here for the raw details. The reports are interactive HTML audits with step controls, rollout tables, tool-call tags, error taxonomies, and matching scalar metric plots in each run folder.</p>
-          <h3>Earlier reports</h3>
-          <div class="report-grid">
-            <article class="report-card">
-              <div>
-                <h3>Earlier batch-128-style run</h3>
-                <p>The first strong behavior-shift report: early checker use moved from late rollout turns to near the start, with many same-call generate/check loops.</p>
-                <div class="report-meta">
-                  <span>step 0-100</span>
-                  <span>peak around step 70</span>
-                </div>
-              </div>
-              <div class="report-actions">
-                <a href="../outputs/rlm_training_analysis/pdjhyq25on9s4vyrxy04x87v/multi_step_report.html">Open report</a>
-                <a class="secondary" href="../outputs/rlm_training_analysis/pdjhyq25on9s4vyrxy04x87v/reward_total.png">Reward plot</a>
-              </div>
-            </article>
-
-            <article class="report-card">
-              <div>
-                <h3>Earlier batch-256-style run</h3>
-                <p>The companion report used in this post's first training narrative, with reward peaking around step 90 and then easing slightly by step 100.</p>
-                <div class="report-meta">
-                  <span>step 0-100</span>
-                  <span>peak around step 90</span>
-                </div>
-              </div>
-              <div class="report-actions">
-                <a href="../outputs/rlm_training_analysis/e7oej0cxoe3j6lwy0tz9euou/multi_step_report.html">Open report</a>
-                <a class="secondary" href="../outputs/rlm_training_analysis/e7oej0cxoe3j6lwy0tz9euou/reward_total.png">Reward plot</a>
-              </div>
-            </article>
-          </div>
-
-          <h3>Latest reports</h3>
-          <div class="report-grid">
-            <article class="report-card featured">
-              <div>
-                <h3>Run <code>x7b6izu...</code></h3>
-                <p>New 10-turn / 2-check batch-256 run. Rollout samples are available through step 120; scalar metrics extend to step 122. This run reached about 500 in-flight rollouts.</p>
-                <div class="report-meta">
-                  <span>Qwen3.5-9B</span>
-                  <span>samples 0-120</span>
-                  <span>peak metric reward 0.623 at step 116</span>
-                </div>
-              </div>
-              <div class="report-actions">
-                <a href="../outputs/rlm_training_analysis/x7b6izuqqfn4ouzk79e9wpz4/multi_step_report.html">Open report</a>
-                <a class="secondary" href="../outputs/rlm_training_analysis/x7b6izuqqfn4ouzk79e9wpz4/reward_total.png">Reward plot</a>
-                <a class="secondary" href="../outputs/rlm_training_analysis/gifs/x7b6izuqqfn4ouzk79e9wpz4/candidateCheckHistogram.gif">Tool GIF</a>
-              </div>
-            </article>
-
-            <article class="report-card featured">
-              <div>
-                <h3>Run <code>o8spwu...</code></h3>
-                <p>New 10-turn / 2-check batch-256 run. Rollout samples are available through step 120. This is the run capped at about 200 in-flight rollouts.</p>
-                <div class="report-meta">
-                  <span>Qwen3.5-9B</span>
-                  <span>samples 0-120</span>
-                  <span>peak metric reward 0.467 at step 20</span>
-                </div>
-              </div>
-              <div class="report-actions">
-                <a href="../outputs/rlm_training_analysis/o8spwu5abkdvne8oakwy02kx/multi_step_report.html">Open report</a>
-                <a class="secondary" href="../outputs/rlm_training_analysis/o8spwu5abkdvne8oakwy02kx/reward_total.png">Reward plot</a>
-                <a class="secondary" href="../outputs/rlm_training_analysis/gifs/o8spwu5abkdvne8oakwy02kx/candidateCheckHistogram.gif">Tool GIF</a>
-              </div>
-            </article>
-          </div>
-
-          <div class="figure-grid">
-            <figure class="figure">
-              <h3>Batch 128 reward</h3>
-              <img src="../blog_assets/rlm_results/train-b128-reward-total.png" alt="Batch 128 total reward curve">
-              <figcaption class="caption">The smaller batch peaked earlier, around step 70.</figcaption>
-            </figure>
-            <figure class="figure">
-              <h3>Batch 256 reward</h3>
-              <img src="../blog_assets/rlm_results/train-b256-reward-total.png" alt="Batch 256 total reward curve">
-              <figcaption class="caption">The larger batch peaked around step 90 and finished slightly below that peak.</figcaption>
-            </figure>
-          </div>
-
-          <h3>Harness exploration</h3>
-          <p>The first behavior was not chemistry. It was orientation. The model spent budget learning the harness. Read the input. Read the skill. List files. Probe the sandbox. Try Python. Sometimes it never wrote a useful candidate.</p>
-          <p>That exploration was expensive. It used turns. It used decode length. It created timeouts. Timeouts were zero-reward trajectories.</p>
-          <p>One of the quickest training changes was simple: stop wasting turns on orientation. Read what matters. Act earlier. Call the checker earlier. Avoid timing out.</p>
-          <p>That is one reason decode length and number of turns drop sharply early in training. The model is not becoming less capable. It is becoming less lost.</p>
-          <p>Later in training, it checked earlier and combined candidate generation with checker calls inside the same tool turn.</p>
-
-          <figure class="figure">
-            <h3>Harness calls</h3>
-            <img src="../outputs/rlm_training_analysis/gifs/e7oej0cxoe3j6lwy0tz9euou/harnessExplorationHistogram.gif" alt="Harness exploration calls per rollout over training for the batch-256-style run">
-            <figcaption class="caption">Early rollouts spend many calls getting oriented. Training quickly moves that budget into action.</figcaption>
-          </figure>
-
-          <h3>Code writing</h3>
-          <p>The RLM setup made code quality visible. That was new. The model was not graded on Python style. Still, Python quality controlled the rollout. Bad imports blocked geometry analysis. Bad loops blocked distance checks. Silent code produced no signal.</p>
-          <p>The eval baselines separated two abilities. Some models wrote cleaner tool code. Some models used messy code and still got better structures.</p>
-
+          <h2>Training setup</h2>
+          <p>The training runs used the RLM environment rather than the old chat-shaped environment. The model was a 9B-scale policy trained on crystal relaxation rollouts with the filesystem, checker skill, and final-file contract exposed during training.</p>
+          <p>The public reports do not record every optimizer detail I would want in a perfect methods section, so I am not going to invent them here. What the reports do show consistently is the behavior surface: each checkpoint audit has 64 parsed rollout samples, reward, tool-call counts, checker timing, candidate/checker events, primary behavior labels, error taxonomies, and matched tool-call excerpts.</p>
+          <p>I looked at four reports:</p>
           <div class="table-wrap">
             <table>
-              <thead>
-                <tr><th>Model</th><th>Clean eval signal</th><th>Code-writing read</th></tr>
-              </thead>
+              <thead><tr><th>Run</th><th>Short name</th><th>Why it matters</th><th>Report</th></tr></thead>
               <tbody>
-                <tr><td>GPT-5.5</td><td>Best reward: <code>0.783</code> at 15 turns / 5 checks. Tool-error rate about <code>12.5%</code>.</td><td>Strongest problem solver. More willing to use Pymatgen, tools, and longer workflows. More exposed to import errors, timeouts, and type errors.</td></tr>
-                <tr><td>GPT-5.4-mini</td><td>Lower reward: <code>0.408</code> at 15 turns / 5 checks. Tool-error rate about <code>2.6%</code>.</td><td>Cleaner mechanics. Good at format, composition, and file handling. Less effective at turning code into low-energy structures.</td></tr>
-                <tr><td>Gemini 2.5 Flash</td><td>Tool-error rates stayed around <code>1-3%</code> on clean runs. Reward did not improve with more budget.</td><td>Concise and low-error. Often wrote enough file-management code to finish. Less evidence of useful deeper search.</td></tr>
-                <tr><td>Claude Haiku 4.5</td><td>Tool-error rate about <code>2.1%</code> at 15 turns / 5 checks. Reward rose to <code>0.454</code>.</td><td>Best low-error code behavior among the non-GPT runs. It used more turns and did more analysis. Expensive. More systematic.</td></tr>
+                <tr><td><code>e7oej0cxoe3j6lwy0tz9euou</code></td><td>batch-256-style run</td><td>Main behavior-change run; reward peaked around step 90.</td><td><a href="../outputs/rlm_training_analysis/e7oej0cxoe3j6lwy0tz9euou/multi_step_report.html">Open report</a></td></tr>
+                <tr><td><code>pdjhyq25on9s4vyrxy04x87v</code></td><td>batch-128-style run</td><td>Earlier peak around step 70; useful for comparing checker timing.</td><td><a href="../outputs/rlm_training_analysis/pdjhyq25on9s4vyrxy04x87v/multi_step_report.html">Open report</a></td></tr>
+                <tr><td><code>x7b6izuqqfn4ouzk79e9wpz4</code></td><td>high-throughput long run</td><td>Later run with about 500 in-flight rollouts; strongest late reward in the report data.</td><td><a href="../outputs/rlm_training_analysis/x7b6izuqqfn4ouzk79e9wpz4/multi_step_report.html">Open report</a></td></tr>
+                <tr><td><code>o8spwu5abkdvne8oakwy02kx</code></td><td>capped-throughput long run</td><td>Later run capped around 200 in-flight rollouts; useful as a cautionary comparison.</td><td><a href="../outputs/rlm_training_analysis/o8spwu5abkdvne8oakwy02kx/multi_step_report.html">Open report</a></td></tr>
               </tbody>
             </table>
           </div>
-
-          <p>Training changed the bug profile too. At step <code>0</code>, the runs were full of raw coding failures. The batch-256-style run had <code>94</code> runtime code errors, <code>23</code> syntax errors, and <code>10</code> import errors across <code>610</code> tool calls. The batch-128-style run had <code>79</code> runtime code errors, <code>30</code> syntax errors, and <code>10</code> import errors across <code>636</code> tool calls.</p>
-          <p>The common bug types were stable: wrong Pymatgen imports and API expectations, manual CIF parsing shape assumptions, undefined variables after long scratch code, syntax errors from bad comprehensions or unmatched delimiters, code with no useful printed signal, and CIFs written by code and rejected by parser checks.</p>
-          <p>By later checkpoints, the raw Python bugs dropped sharply. In the batch-256-style run, errors fell from <code>131/610</code> tool calls at step <code>0</code> to <code>8/526</code> at step <code>100</code>. In the latest high-concurrency run, errors fell from <code>108/586</code> at step <code>0</code> to <code>12/499</code> at step <code>120</code>.</p>
-          <p>That is one of the clearest signs of learning. The model learned to write code that ran. Then it learned to make that code useful. The remaining failures moved from syntax and imports toward CIF validity, energy, and checker-budget tradeoffs.</p>
-
-          <figure class="figure">
-            <h3>Error modes</h3>
-            <img src="../outputs/rlm_eval_analysis/crystal-relaxation-rlm/presentation/assets/train-b256-harness.gif" alt="Batch 256 harness exploration behavior over training steps">
-            <figcaption class="caption">The trace format turns wrong answers into inspectable behavior: what the model read, when it acted, and how it used feedback.</figcaption>
-          </figure>
-
-          <h3>Multi-action turns</h3>
+          <p>The most meaningful single run for the first narrative is the batch-256-style run. It starts with a messy policy that wastes many calls on orientation and buggy code, then moves toward earlier checking, fewer tool errors, and more compact generate-check-revise loops.</p>
           <div class="table-wrap">
             <table>
-              <thead>
-                <tr><th>Run / step</th><th class="num">Mean reward</th><th class="num">Mean first checker turn</th><th class="num">Candidate + checker events</th><th>What it looked like</th></tr>
-              </thead>
+              <thead><tr><th>Run</th><th>Start reward</th><th>Peak reward</th><th>End reward</th><th>First checker, start -&gt; end</th><th>Candidate+checker, start -&gt; end</th><th>Mean calls, start -&gt; end</th></tr></thead>
               <tbody>
-                <tr><td>Batch-128, step 0</td><td class="num">0.163</td><td class="num">4.56</td><td class="num">14</td><td>Harness and file exploration, Python errors, delayed checking.</td></tr>
-                <tr><td>Batch-128, step 70</td><td class="num">0.566</td><td class="num">1.36</td><td class="num">514</td><td>Peak reward, early checker use, many same-call loops.</td></tr>
-                <tr><td>Batch-128, step 100</td><td class="num">0.470</td><td class="num">1.35</td><td class="num">514</td><td>Still efficient. Below peak reward.</td></tr>
-                <tr><td>Batch-256, step 0</td><td class="num">0.168</td><td class="num">4.19</td><td class="num">6</td><td>Similar early harness exploration.</td></tr>
-                <tr><td>Batch-256, step 90</td><td class="num">0.527</td><td class="num">2.19</td><td class="num">188</td><td>Peak reward, more same-call checking than the start.</td></tr>
-                <tr><td>Batch-256, step 100</td><td class="num">0.510</td><td class="num">2.30</td><td class="num">294</td><td>More checker use. Slightly below the reward peak.</td></tr>
+                <tr><td>Batch-256-style <code>e7oej0...</code></td><td><code>0.168</code></td><td><code>0.527</code> at step 90</td><td><code>0.510</code></td><td><code>4.19 -&gt; 2.30</code></td><td><code>6 -&gt; 294</code></td><td><code>9.53 -&gt; 8.22</code></td></tr>
+                <tr><td>Batch-128-style <code>pdjhy...</code></td><td><code>0.163</code></td><td><code>0.566</code> at step 70</td><td><code>0.470</code></td><td><code>4.56 -&gt; 1.35</code></td><td><code>14 -&gt; 514</code></td><td><code>9.94 -&gt; 9.64</code></td></tr>
+                <tr><td>High-throughput <code>x7b6...</code></td><td><code>0.139</code></td><td><code>0.639</code> at step 120</td><td><code>0.639</code></td><td><code>4.80 -&gt; 1.00</code></td><td><code>13 -&gt; 360</code></td><td><code>9.16 -&gt; 7.80</code></td></tr>
+                <tr><td>Capped-throughput <code>o8sp...</code></td><td><code>0.157</code></td><td><code>0.484</code> at step 20</td><td><code>0.459</code></td><td><code>4.82 -&gt; 2.20</code></td><td><code>15 -&gt; 226</code></td><td><code>9.88 -&gt; 8.83</code></td></tr>
               </tbody>
             </table>
           </div>
-
-          <div class="figure-grid">
-            <figure class="figure">
-              <h3>Batch 128 candidate/checker</h3>
-              <img src="../outputs/rlm_eval_analysis/crystal-relaxation-rlm/presentation/assets/train-b128-candidate-check.gif" alt="Batch 128 candidate plus checker histogram over training steps">
-              <figcaption class="caption">The policy increasingly combines structure generation and checking in the same tool call.</figcaption>
-            </figure>
-            <figure class="figure">
-              <h3>Batch 256 candidate/checker</h3>
-              <img src="../outputs/rlm_eval_analysis/crystal-relaxation-rlm/presentation/assets/train-b256-candidate-check.gif" alt="Batch 256 candidate plus checker histogram over training steps">
-              <figcaption class="caption">The same behavior appears in the larger batch run, with a different timing profile.</figcaption>
-            </figure>
-          </div>
-
-          <p>Starting traces looked like: read <code>input.cif</code>, read the skill, inspect the sandbox, look for available files, write ad hoc parsing code, hit a Pymatgen API assumption, hit a syntax or runtime error, maybe write a candidate, maybe check it too late.</p>
-          <p>Later traces looked more like: inspect the input, write a candidate, run the checker in the same tool call, revise based on feedback, and repeat until budget exhaustion or success. That is a real policy change.</p>
+          <p>The table gives the training story in miniature. Reward moved, but the workflow moved too. The model learned to get to the checker earlier, spend fewer calls on harness orientation, and combine candidate generation with checking in the same step.</p>
+          <p>The surprising part was not any one of those metrics by itself. It was the combination. The model quickly moved toward a "learn by trying" strategy: less introduction, less wandering around the workspace, and more immediate attempts at candidate generation and checking. I connect this to the classic spaghetti-tower exercise, where children often outperform adults because they start testing structures sooner instead of spending the whole time planning.</p>
+          <p>In this environment, that behavior is rational. If a rollout times out or gets truncated, it scores like a failed trajectory. So the model learns that long orientation phases are expensive. It narrows the workflow toward actions that produce feedback: write something, check it, revise it, and keep enough budget to leave a final artifact.</p>
         </section>
+        <section id="errors">
+          <h2>Code and error modes</h2>
+          <p>At step 0 in the batch-256-style run, the audit counted <code>610</code> executed tool calls across <code>64</code> parsed rollouts. Mean reward was <code>0.168</code>, mean first checker turn was <code>4.19</code>, and the model spent many calls reading files, reading skills, and writing brittle scratch code.</p>
+          <p>The early errors were concrete:</p>
+          <ul>
+            <li>wrong Pymatgen imports and API expectations</li>
+            <li>manual CIF parsing shape assumptions</li>
+            <li>undefined variables after long scratch scripts</li>
+            <li>syntax errors from malformed comprehensions or missing operators</li>
+            <li>code that printed nothing, so the model had no observation to use</li>
+            <li>CIFs that were written but rejected by parser or checker logic</li>
+          </ul>
+          <p>By step 100 in the same run, raw tool errors had fallen from <code>131/610</code> calls to <code>8/526</code> calls. For me, this was one of the clearest signs of learning in this setup. The model learned to write code that ran, and then it learned to make that code useful.</p>
+          <p>The error-mode plot is useful because it separates model workflow failures from chemistry failures. Early errors include imports, syntax, runtime exceptions, and no-observable-signal calls. Later failures move toward CIF validity, check-budget tradeoffs, force proxy, and formation energy.</p>
+        </section>
+        <section id="trace">
+          <h2>Real trace: generate, check, revise</h2>
+          <p>The behavior shift is easiest to see through a real trace. The example below is from the high-throughput <code>x7b6...</code> report, step 120, sample 15. It reached reward <code>1.0</code>, used the checker immediately, and then searched along a lattice-scaling direction while watching bond score, force proxy, and formation energy. This trace also shows the budget-enforcement looseness mentioned above: checker feedback reports exhaustion, but later checker calls are still present in the audit.</p>
+          <p>This is not an ideal scientific relaxation algorithm. It is a useful RLM trace because it shows the policy doing work inside the environment: read the CIF, generate a candidate, read checker feedback, revise the candidate, and finally choose the best tradeoff it found.</p>
+          <details>
+          <summary>Real rollout trace, condensed from report excerpts</summary>
 
+          <pre><code>Run: x7b6izuqqfn4ouzk79e9wpz4
+          Step: 120
+          Sample: 15
+          Problem: ErSiNi
+          Reward: 1.0
+
+          Turn 1: input inspection
+            The model reads /task/inputs/unrelaxed.cif.
+            It identifies P1 symmetry, Er4 Si4 Ni4 composition, and an orthorhombic-looking cell:
+            a=6.76058, b=4.12022, c=7.07398.
+
+          Turn 2: first candidate + checker
+            It writes a slightly expanded candidate:
+            a=7.10, b=4.25, c=7.35.
+            Checker feedback:
+              valid=false
+              bond_score=0.577
+              max_force_proxy=1.091
+              formation_energy=3.528 eV/atom
+            The feedback says bond lengths are unreasonable and force proxy indicates clashes.
+
+          Turn 3: larger candidate + checker
+            It expands substantially:
+            a=9.00, b=6.00, c=9.50.
+            Checker feedback:
+              valid=true
+              bond_score=0.917
+              max_force_proxy=0.827
+              formation_energy=1.359 eV/atom
+            Bond lengths improve, but the force proxy is still high.
+
+          Turns 4-8: search along the same edit direction
+            a=10.50, b=7.00, c=11.00:
+              bond_score=0.900, max_force_proxy=0.641, formation_energy=0.902
+            a=12.00, b=8.00, c=13.00:
+              formation_energy=-1.811, but bond_score=-1.0 because isolated atoms appear
+            a=11.00, b=7.50, c=12.00:
+              bond_score=1.0, max_force_proxy=0.520, formation_energy=0.168
+            a=11.30, b=7.65, c=12.25:
+              bond_score=1.0, max_force_proxy=0.490, formation_energy=-0.448
+            a=11.55, b=7.75, c=12.50:
+              bond_score=0.875, max_force_proxy=0.460, formation_energy=-0.987
+
+          Turn 9: too far
+            a=11.75, b=7.85, c=12.75:
+              formation_energy=-1.394, but bond_score=-1.0 because isolated atoms appear.
+
+          Turn 10: finalization
+            The model returns to the seventh structure, the best balance it found:
+              a=11.55, b=7.75, c=12.50
+              bond_score=0.875
+              formation_energy=-0.987 eV/atom
+            It writes that candidate to /task/final.cif.</code></pre>
+
+          Two things are worth noticing. First, the model is doing more than formatting a CIF; it is running a bounded search over a physical artifact. Second, the search is still crude. It mostly scales the lattice and watches checker feedback, which is exactly why the next environment version should give the model better local-geometry editing tools.
+          </details>
+        </section>
+        <section id="components">
+          <h2>Component rewards</h2>
+          <p>Top-line reward is too compressed for this task. The interesting question is which rung of the ladder the model reached.</p>
+          <pre><code class="language-text">write a valid CIF
+  -&gt; preserve composition
+  -&gt; avoid bad local geometry
+  -&gt; reduce energy enough
+  -&gt; finish within the turn and check budget</code></pre>
+          <p>Format became easy. The file contract helped a lot because the final answer was a file, not a span of chat text.</p>
+          <p>Composition became learnable. Several models could preserve or recover composition even when they failed the final score.</p>
+          <p>Bond lengths improved with budget and training. This often moved together with composition because both can be attacked through local geometry edits.</p>
+          <p>Formation energy stayed hard. It was the main gate between partial credit and full credit, and it was the component least likely to be solved by simple formatting, coordinate wrapping, or conservative perturbation.</p>
+          <p>Formation energy is the most interesting component because it is the genuinely scientific objective in this task. Format can be learned as a contract, composition can be protected by copying the right species, and bond lengths can often be improved through local cleanup. Formation energy asks whether the proposed structure is actually closer to a stable physical configuration, rather than whether it only looks like a valid CIF.</p>
+          <p>The figures below are the ones I would keep in the main body for the batch-256-style run: total reward, component rewards, and efficiency. They tell a cleaner story than a long list of scalar values in prose.</p>
+          <figure class="figure">
+            <img src="../outputs/rlm_eval_analysis/crystal-relaxation-rlm/presentation/assets/train-b256-reward-total.png" alt="Batch 256 total reward">
+            <figcaption class="caption">Batch 256 total reward</figcaption>
+          </figure>
+          <figure class="figure">
+            <img src="../outputs/rlm_eval_analysis/crystal-relaxation-rlm/presentation/assets/train-b256-formation-energy.png" alt="Batch 256 formation-energy reward">
+            <figcaption class="caption">Batch 256 formation-energy reward</figcaption>
+          </figure>
+          <figure class="figure">
+            <img src="../outputs/rlm_eval_analysis/crystal-relaxation-rlm/presentation/assets/train-b256-bond-length.png" alt="Batch 256 bond-length reward">
+            <figcaption class="caption">Batch 256 bond-length reward</figcaption>
+          </figure>
+          <details>
+          <summary>Additional component and efficiency plots</summary>
+
+          <figure class="figure"><img src="../outputs/rlm_eval_analysis/crystal-relaxation-rlm/presentation/assets/train-b256-format.png" alt="Batch 256 format reward"><figcaption class="caption">Batch 256 format reward</figcaption></figure>
+
+          <figure class="figure"><img src="../outputs/rlm_eval_analysis/crystal-relaxation-rlm/presentation/assets/train-b256-composition.png" alt="Batch 256 composition reward"><figcaption class="caption">Batch 256 composition reward</figcaption></figure>
+
+          <figure class="figure"><img src="../outputs/rlm_eval_analysis/crystal-relaxation-rlm/presentation/assets/train-b256-first-checker.gif" alt="Batch 256 first-checker timing"><figcaption class="caption">Batch 256 first-checker timing</figcaption></figure>
+
+          <figure class="figure"><img src="../outputs/rlm_eval_analysis/crystal-relaxation-rlm/presentation/assets/train-b256-candidate-check.gif" alt="Batch 256 candidate/checker timing"><figcaption class="caption">Batch 256 candidate/checker timing</figcaption></figure>
+
+          <figure class="figure"><img src="../outputs/rlm_eval_analysis/crystal-relaxation-rlm/presentation/assets/train-b256-decode-length.png" alt="Batch 256 decode length"><figcaption class="caption">Batch 256 decode length</figcaption></figure>
+
+          <figure class="figure"><img src="../outputs/rlm_eval_analysis/crystal-relaxation-rlm/presentation/assets/train-b256-num-turns.png" alt="Batch 256 number of turns"><figcaption class="caption">Batch 256 number of turns</figcaption></figure>
+          </details>
+          <p>Different models got stuck at different rungs. GPT-5.5 could use extra checks to reach many full-credit structures. GPT-5.4-mini often reached the lower rungs but did not recover enough energy. Claude benefited from the larger budget but spent more turns. Gemini did not automatically improve when the budget grew.</p>
+        </section>
         <section id="length">
           <h2>Length and efficiency</h2>
-          <p>In many RL settings, harder problems bias models toward longer reasoning. That happened here too. The RLM version looked different. It was longer or denser tool workflow. More files. More code. More checks.</p>
+          <p>In the legacy <code>MultiTurnEnv</code> code, longer reasoning tended to appear only when the model scale was large enough and the problem was hard enough. The older 230B analysis showed richer and longer reasoning over training, while the 30B analysis showed the opposite pattern: reasoning compressed as the model learned safer heuristics.</p>
+          <p>The RLM version gives a different lens on the same issue. Length includes more than prose: tool turns, scratch code, checker calls, and file operations all matter.</p>
+          <p>The rough RLM pattern was:</p>
           <ol>
-            <li>Early training starts near the maximum length or turn budget because the model is inefficient.</li>
+            <li>Early training starts near the maximum turn budget because the model is inefficient.</li>
             <li>Decode length and tool use decrease as the model learns easy reward components like format, composition, and bond lengths.</li>
-            <li>Length can increase again once those easy components saturate and the remaining gain has to come from harder formation-energy improvements.</li>
+            <li>Length can increase again when the remaining gains require real search for lower-energy structures.</li>
           </ol>
-
-          <div class="figure-grid">
-            <figure class="figure">
-              <h3>Batch 128 decode length</h3>
-              <img src="../blog_assets/rlm_results/train-b128-decode-length.png" alt="Batch 128 decode length over training">
-              <figcaption class="caption">Shorter is not always better; the hard region may require more search.</figcaption>
-            </figure>
-            <figure class="figure">
-              <h3>Batch 256 decode length</h3>
-              <img src="../blog_assets/rlm_results/train-b256-decode-length.png" alt="Batch 256 decode length over training">
-              <figcaption class="caption">Decode length is part of the policy. It is an efficiency statistic too.</figcaption>
-            </figure>
-          </div>
-
-          <div class="figure-grid">
-            <figure class="figure">
-              <h3>Batch 128 bond-length reward</h3>
-              <img src="../blog_assets/rlm_results/train-b128-bond-length.png" alt="Batch 128 bond length reward curve">
-              <figcaption class="caption">Bond-length reward was one of the components that improved before the hardest energy gains.</figcaption>
-            </figure>
-            <figure class="figure">
-              <h3>Batch 256 formation-energy reward</h3>
-              <img src="../outputs/rlm_eval_analysis/crystal-relaxation-rlm/presentation/assets/train-b256-formation-energy.png" alt="Batch 256 formation energy reward curve">
-              <figcaption class="caption">Formation energy remained the main gate between partial and full credit.</figcaption>
-            </figure>
-          </div>
-
-          <div class="callout">
-            <p>The better RLM question may not be "How do we make the model shorter?" It may be: when is extra tool use useful search, and when is it just wasted motion?</p>
-          </div>
-
-          <h3>Scheduler hypothesis</h3>
-          <p>The latest long runs added one caveat to the length story. The capped run, <code>o8spwu...</code>, repeatedly sat at about <code>200</code> in-flight rollouts. It never showed the usual late length collapse. Mean turns moved from about <code>9.9</code> at step <code>0</code> to about <code>9.3</code> at step <code>120</code>. Mean decode length was still about <code>8254</code> tokens. Reward peaked early at <code>0.467</code> and ended around <code>0.412</code>.</p>
-          <p>The comparison run, <code>x7b6...</code>, reached about <code>500</code> in-flight rollouts. It showed the stronger length shift, with mean turns falling to about <code>3.7</code> and mean decode length to about <code>2717</code> tokens by step <code>122</code>. It also hit a higher reward peak, <code>0.623</code> at step <code>116</code>, before falling at the end.</p>
-          <p>The logs make this a hypothesis, not a controlled result. The capped run mostly reported <code>Max Off-Policy</code> values of <code>1-2</code>. The higher-concurrency run reached <code>Max Off-Policy</code> <code>3</code> late in training. More in-flight rollouts may widen the age spread of samples, so updates see more trajectories from weaker earlier policies that are still biased toward easy gains and shorter workflows.</p>
-
-          <div class="table-wrap">
-            <table>
-              <thead>
-                <tr><th>Run</th><th class="num">Observed in-flight</th><th class="num">Max Off-Policy</th><th class="num">Reward peak</th><th>Length behavior</th><th>Interpretation</th></tr>
-              </thead>
-              <tbody>
-                <tr><td><code>o8spwu...</code></td><td class="num">about 200</td><td class="num">1-2</td><td class="num">0.467 at step 20</td><td>Turns stayed high, about 9.3 late.</td><td>Capped concurrency, little length collapse, no late reward jump.</td></tr>
-                <tr><td><code>x7b6...</code></td><td class="num">about 500</td><td class="num">0-3</td><td class="num">0.623 at step 116</td><td>Turns fell to about 3.7 late.</td><td>Higher concurrency. Larger off-policy lag. Stronger, less stable behavior shift.</td></tr>
-              </tbody>
-            </table>
-          </div>
-
-          <div class="figure-grid">
-            <figure class="figure">
-              <h3>200 in-flight decode</h3>
-              <img src="../outputs/rlm_training_analysis/o8spwu5abkdvne8oakwy02kx/decode_length.png" alt="Decode length curve for o8spwu run">
-              <figcaption class="caption">The capped run stayed long. See also the <a href="../outputs/rlm_training_analysis/o8spwu5abkdvne8oakwy02kx/reward_total.png">reward plot</a> and <a href="../outputs/rlm_training_analysis/o8spwu5abkdvne8oakwy02kx/num_turns.png">turn plot</a>.</figcaption>
-            </figure>
-            <figure class="figure">
-              <h3>500 in-flight decode</h3>
-              <img src="../outputs/rlm_training_analysis/x7b6izuqqfn4ouzk79e9wpz4/decode_length.png" alt="Decode length curve for x7b6izu run">
-              <figcaption class="caption">The higher-concurrency run shortened late. See also the <a href="../outputs/rlm_training_analysis/x7b6izuqqfn4ouzk79e9wpz4/reward_total.png">reward plot</a> and <a href="../outputs/rlm_training_analysis/x7b6izuqqfn4ouzk79e9wpz4/num_turns.png">turn plot</a>.</figcaption>
-            </figure>
-          </div>
+          <p>This resembles a pattern I have seen in other RL settings: if truncated traces score as zero, models quickly learn to avoid responses that run into truncation. In RLMs, the same pressure appears as workflow compression. The model stops spending turns on generic setup and starts spending them on actions that can change the score.</p>
+          <p>For this reason, "make it shorter" is the wrong training objective by itself. The better question is:</p>
+          <blockquote>When is extra tool use useful search, and when is it wasted motion?</blockquote>
+          <p>For the main batch-256-style run, reward peaked around step 90 and then slightly declined by step 100. The useful interpretation is qualitative: the policy learned the workspace, then learned to exploit the checker, but formation energy remained the hard part.</p>
         </section>
-
-        <section id="failures">
-          <h2>Failure modes</h2>
-          <p>The early step-0 audits were full of useful failure modes: too much harness exploration, brittle manual CIF parsing, Pymatgen API assumptions, syntax errors, runtime errors, Python code with no print statements, checker calls used too late, and candidate CIFs never copied to the final answer path.</p>
-          <p>At one point, the step-0 audit counted <code>610</code> executed tool calls across <code>64</code> parsed samples, with mean reward <code>0.168</code>. It included <code>94</code> runtime code errors, <code>23</code> syntax errors, and many Pymatgen expectation failures.</p>
-          <p>By the later checkpoints, the failures changed. There were fewer broad exploratory mistakes. There were more checker-centered loops. The model still failed. The failures moved toward the hard objective: formation energy, force proxy, check-budget exhaustion, or sandbox setup before the rollout could begin.</p>
-          <h2>Learned behavior</h2>
-          <p>The cleanest interpretation is component-wise. Format became easy. Composition became learnable. Bond lengths improved with budget and training. Formation energy stayed hard.</p>
-          <pre>write a valid CIF
-  -> preserve composition
-  -> avoid bad local geometry
-  -> reduce energy enough
-  -> finish within the turn and check budget</pre>
-          <p>The model did not climb that ladder uniformly. Different models got stuck at different rungs.</p>
+        <section id="scheduler-caveat">
+          <h2>Scheduler caveat</h2>
+          <p>The later long runs add a scheduler caveat, but I would not make it a main conclusion. The high-throughput run reached about 500 in-flight rollouts and ended much stronger in the report data. The capped run sat near 200 in-flight rollouts, peaked earlier, and did not show the same sharp checker-timing shift.</p>
+          <p>My current hypothesis is that rollout scheduling and sample age may affect the behavior curriculum, but it is not a controlled result yet. I would treat it as an operational clue, not as evidence that higher concurrency is inherently better.</p>
         </section>
-
         <section id="conclusion">
-          <h2>Next changes</h2>
-          <p>The next version should treat budgets as part of the curriculum. If a model is still failing format or composition, extra formation-energy search is wasted. If it has saturated format, composition, and bond lengths, then maybe it needs more checker budget, more local search, or a different skill description.</p>
-          <p>I would also keep separating infrastructure failures from model failures. In the best GPT-5.5 RLM run, the zero-reward tail was mostly sandbox readiness. That should not be interpreted the same way as a model producing a bad CIF.</p>
-          <p>The biggest operational bottleneck is sandbox count. RLM training needs many sandboxes. The cost driver moves from pure generation to generation plus sandbox lifecycle plus tool execution.</p>
-
-          <h2>Conclusion</h2>
-          <p>RLM is a viable way to train crystal relaxation agents. It also points beyond this task. Training changed strategies and scores. The model learned to pack more useful work into a turn. Generate. Check. Revise. It used code for distances and angles instead of guessing from text. It made fewer syntax, runtime, and API mistakes. That is the broader promise of <code>rlm-harness</code>: train the whole work loop.</p>
-          <p>It does not magically beat the classic environment on every metric. Classic direct feedback is still easier. It is cleaner for short repair.</p>
-          <p>The important shift is that the RLM formulation made training possible at a smaller scale. In the old <code>MultiTurnEnv</code> setup, useful behavior seemed to require at least roughly 30B-parameter models. With the filesystem, skill, and checker loop exposed as an RLM task, I could train a 9B model and watch it learn a workable scientific workflow.</p>
-          <p>RLM trains and measures a different object: a model working inside a small scientific workspace. Read files. Write code. Use a checker. Revise artifacts. Leave a trace.</p>
-          <p>That trace changed the project. It made implementation bugs visible. It made model behavior visible. It made reward improvements easier to interpret. It showed the model learning better workflow.</p>
+          <h2>Why RLM mattered</h2>
+          <p>The old environment is still a good baseline. It is clean for short direct repair, and it showed that the task was solvable. But it did not expose the full work loop.</p>
+          <p>The RLM version trains and measures a different object: a model working inside a small scientific workspace. It must read files, write code, use a checker, revise artifacts, and leave a trace. This changed the project because wrong answers became inspectable.</p>
+          <p>The most important outcome is that the RLM formulation made meaningful training possible at smaller scale. In the old <code>MultiTurnEnv</code> setup, interesting reasoning changes seemed to require at least roughly 30B-parameter models, and the 230B run was where richer scientific reasoning really emerged. With the filesystem, skill, and checker loop exposed as an RLM task, I could train a 9B-scale model and see it learn a workable scientific workflow.</p>
+          <p>I do not read this as the 9B model solving crystal relaxation. I read it as the training signal moving to the right level. The model was no longer only learning how to emit a CIF-looking answer; it was learning how to operate in the workspace where the CIF is produced.</p>
         </section>
-
+        <section id="next-experiments">
+          <h2>Next experiments</h2>
+          <p>The next version should treat turn and checker budgets as part of the curriculum. If a model is still failing format or composition, extra formation-energy search is wasted. Once format, composition, and bond lengths saturate, the curriculum can spend more budget on local search, checker-guided revision, or a more explicit structure-editing skill.</p>
+          <p>The budget curriculum is the next experiment I care about most. A fixed budget treats every training stage as if it needs the same kind of search, but the traces suggest otherwise. Early on, the model needs to learn the contract and stop wasting turns. Later, once the easy rungs are stable, it needs more room and better tools for the hard energy objective.</p>
+          <p>I also want to keep infrastructure failures separate from model failures. In the best GPT-5.5 RLM run, part of the zero-reward tail came from sandbox readiness rather than bad CIFs. I do not treat that as the same failure mode as a model producing a bad structure. The newer sandbox system should make this less central by improving startup reliability and scaling, so the next post should focus less on sandbox bottlenecks and more on controlled training changes.</p>
+          <p>The changes I would actually run next are:</p>
+          <ul>
+            <li>a budget curriculum that starts with few checks and expands only after format/composition are stable</li>
+            <li>a stronger local-geometry editing skill that makes safe coordinate revisions easier</li>
+            <li>evals that compare trained RLM policies against non-RLM policies on the same structures</li>
+            <li>a cleaner ablation of checker wording, checker budget, and final scoring</li>
+          </ul>
+        </section>
         <section id="artifacts">
           <h2>Artifacts</h2>
+          <p>Start here:</p>
           <ul class="artifact-list">
-            <li><a href="rlm_training_blog.md">Markdown draft</a></li>
-            <li><a href="https://github.com/PrimeIntellect-ai/research-environments/tree/main/environments/rlm_search">Public RLM search environment</a></li>
-            <li><a href="https://github.com/PrimeIntellect-ai/rlm-harness">RLM harness source</a></li>
-            <li><a href="../crystal_relaxation_multiturn_to_rlm_blog.html">Earlier HTML narrative</a></li>
-            <li><a href="../outputs/rlm_eval_analysis/crystal-relaxation-rlm/multi_eval_report.html">RLM eval analysis</a></li>
-            <li><a href="../outputs/rlm_training_analysis/x7b6izuqqfn4ouzk79e9wpz4/multi_step_report.html">New training analysis, x7b6izu 10t/2c run</a></li>
-            <li><a href="../outputs/rlm_training_analysis/o8spwu5abkdvne8oakwy02kx/multi_step_report.html">New training analysis, o8spwu 10t/2c run</a></li>
-            <li><a href="../outputs/rlm_training_analysis/e7oej0cxoe3j6lwy0tz9euou/multi_step_report.html">Training analysis, batch-256-style run</a></li>
-            <li><a href="../outputs/rlm_training_analysis/pdjhyq25on9s4vyrxy04x87v/multi_step_report.html">Training analysis, batch-128-style run</a></li>
-            <li><a href="../rlm_transition_report.md">Transition notes</a></li>
-            <li><a href="../observations_rlm_training.md">Training observations</a></li>
+            <li><a href="../outputs/rlm_eval_analysis/crystal-relaxation-rlm/multi_eval_report.html">RLM eval analysis</a>: the best place to compare eval runs, models, budgets, pass rates, and tool behavior.</li>
+            <li><a href="../outputs/rlm_training_analysis/e7oej0cxoe3j6lwy0tz9euou/multi_step_report.html">Main batch-256-style training report</a>: the clearest report for the first workflow-learning narrative.</li>
+            <li><a href="../outputs/rlm_training_analysis/x7b6izuqqfn4ouzk79e9wpz4/multi_step_report.html">High-throughput long training report, <code>x7b6izu...</code></a>: later training report with the strongest late reward and the real trace used above.</li>
+          </ul>
+          <p>Supporting reports:</p>
+          <ul>
+            <li><a href="../outputs/rlm_training_analysis/pdjhyq25on9s4vyrxy04x87v/multi_step_report.html">Batch-128-style training report</a>: useful for comparing earlier checker timing and reward peaks.</li>
+            <li><a href="../outputs/rlm_training_analysis/o8spwu5abkdvne8oakwy02kx/multi_step_report.html">Capped-throughput long training report, <code>o8spwu...</code></a>: comparison run capped near 200 in-flight rollouts.</li>
+            <li><a href="../rlm_transition_report.md">Transition notes</a>: local eval ids, platform ids, and classic-vs-RLM result tables.</li>
+            <li><a href="../observations_rlm_training.md">Training observations</a>: raw notes and generated audits for early tool-call behavior.</li>
+          </ul>
+          <p>Background and source:</p>
+          <ul>
+            <li><a href="blog_post.html">Original crystal relaxation post</a>: background on the first environment and why crystal relaxation was the target task.</li>
+            <li><a href="https://github.com/PrimeIntellect-ai/research-environments/tree/main/environments/rlm_search">Public RLM search environment</a>: reference environment for the taskset/harness/final-file pattern.</li>
+            <li><a href="https://github.com/PrimeIntellect-ai/rlm-harness">RLM harness source</a>: harness implementation used for agentic rollouts.</li>
+            <li><a href="../crystal_relaxation_multiturn_to_rlm_blog.html">Earlier HTML narrative</a>: previous writeup focused on the migration from <code>MultiTurnEnv</code> to RLM.</li>
           </ul>
         </section>
       </article>
