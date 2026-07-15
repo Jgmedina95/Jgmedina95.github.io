@@ -1,26 +1,18 @@
 # Training RLMs to Relax Crystals
 
-This post is about moving my crystal relaxation environment from a classic multi-turn chat loop into an RLM-style filesystem task. The original project is here: [Agentic Pipeline for Crystal Relaxation](blog_post.html). In that environment, the model receives an unrelaxed crystal structure, proposes a relaxed CIF, gets feedback, and tries again.
+This post is about moving my crystal relaxation environment from a classic multi-turn chat loop into an RLM-style filesystem task. The original project is here: [Agentic Pipeline for Crystal Relaxation](blog_post.html). In that environment, the model receives an unrelaxed crystal structure and proposes a relaxed [CIF](https://en.wikipedia.org/wiki/Crystallographic_Information_File). The structure is evaluated through metrics measuring format, composition, bond distances, and formation energy. The feedback is passed back as a message, so the LLM can refine its answer.
 
-I made this move because RLMs are a better fit for long-horizon work than a conventional multi-turn environment. In a chat loop, the environment keeps pulling the model back into the same answer-feedback-answer rhythm. In an RLM harness, the agent manages more of its own context, decides when to inspect files or use tools, and works in a responsive environment instead of only producing text.
+I made this move because [RLMs are a better fit for long-horizon work](https://www.primeintellect.ai/blog/rlm) than a conventional multi-turn environment. In a chat loop, the environment keeps pulling the model back into the same answer-feedback-answer rhythm. In an [RLM harness](https://github.com/PrimeIntellect-ai/rlm-harness), the agent manages more of its own context, decides when to inspect files or use tools, and works in a responsive environment instead of only producing text.
 
 The workspace becomes part of the task. Files are read, scratch code is written, candidates are checked, and each observation affects the next move.
 
-Crystal relaxation is a good stress test for this because it combines three things I care about. It is a hard scientific problem with useful intermediate goals, it represents a 3D object through a text format, and it is not yet a fully explored RL setting. A model can preserve the chemical formula and still fail because atoms are too close, the bond network is broken, the formation energy is too high, or the workflow never reaches a useful final candidate.
+Because RLMs force the model to deal with environment tools and setup, the harness promotes learning behavior that generalizes across tasks: inspect the workspace, understand the available skills, write intermediate artifacts, use feedback, and leave the expected final file.
 
-The RLM version changed what I was training. The model no longer just answered in chat. It worked inside a small filesystem, inspected `input.cif`, wrote code, called a checker skill, revised candidate files, and left its final answer at `/task/final.cif`.
+Crystal relaxation is a good stress test for this because it combines three things I care about. It is a hard scientific problem with useful intermediate goals, it represents a 3D object through a text format, and it is not yet a fully explored RL setting. Relaxing a crystal structure is open ended: there is not a single good answer, and there is not a single approach to solving it. Crystals can be arranged in a huge number of combinations, so training may surface different strategies for searching, editing, and checking structures. A model can preserve the chemical formula and still fail because atoms are too close, the bond network is broken, the formation energy is too high, or the workflow never reaches a useful final candidate.
+
+With RLM, the model stops being a chatbot. The crystal input now has to be inspected from the `input.cif` file, and the model will need to write down its proposed structures as `final.cif`. The checker skill, described below, can be used to check progress and validity of the proposed structures, although the model could also use it on the inputs if it considers that to be a good strategy. Training will promote the better strategy in the end.
 
 The migration made the task harder, but the traces became much more informative. I could see whether the model was learning chemistry, file handling, checker use, Python debugging, or just the final artifact contract.
-
-## Short version
-
-- RLM did not make the benchmark easier across the board. The best corrected classic GPT-5.5 run still nearly saturated the short benchmark, with mean reward `0.998`.
-- The best GPT-5.5 RLM eval reached mean reward `0.783` under a `15-turn / 5-check` budget, with `55/75` full-credit rollouts.
-- The first purpose of the experiments was viability: can a filesystem-and-checker formulation work at all for crystal relaxation?
-- The reason to try RLM was long-horizon agency: the model can manage context, operate on files, call tools, and learn from a responsive workspace.
-- The answer was yes, and the trace data is the reason it matters. Early rollouts wasted turns reading the workspace and writing brittle Python; later rollouts checked earlier, used fewer broken tool calls, and packed candidate generation plus checking into the same work step.
-- The big scientific bottleneck did not disappear. Format, composition, and local geometry were easier than formation energy.
-- The most important practical change was scale. In the old `MultiTurnEnv` setup, interesting reasoning changes seemed to require much larger models; with the filesystem, skill, and checker loop exposed as an RLM task, I could train a 9B-scale model and watch a workable scientific workflow emerge.
 
 ## From MultiTurnEnv to RLM
 
@@ -28,7 +20,7 @@ The old environment was a classic `MultiTurnEnv`: the environment owned the loop
 
 The RLM version makes two separate changes that are easy to confuse.
 
-First, I moved the environment into the newer Verifiers v1 taskset style. The taskset owns the dataset slice, per-example metadata, and the files mounted into each task. That is where the language of "tasksets" comes from: instead of thinking about a single prompt row, the environment constructs a task instance with an input file, private scorer metadata, and a known final-answer path.
+First, I moved the environment into the newer [Verifiers v1](https://www.primeintellect.ai/blog/verifiers-v1) taskset style. The taskset owns the dataset slice, per-example metadata, and the files mounted into each task. That is where the language of "tasksets" comes from: instead of thinking about a single prompt row, the environment constructs a task instance with an input file, private scorer metadata, and a known final-answer path. Each taskset can also include its own coding environment and test suite.
 
 Second, I wrapped that taskset in the RLM harness. The harness owns the agent workflow: the system prompt, the tool surface, the long-lived IPython control loop, the skills directory, the turn budget, and the final-file contract. The model can inspect files, run code, call installed skills, and decide when it has enough signal to write `/task/final.cif`.
 
@@ -69,15 +61,15 @@ The new task looks like a filesystem:
 `-- final.cif
 ```
 
-The difference matters because the model can now do real agent work. It can read the input, write a scratch script, compute distances, generate a candidate CIF, ask the checker for public feedback, revise the file, and only then write the final artifact.
-
-The reference implementation I used for the RLM shape was Prime Intellect's [`rlm_search` environment](https://github.com/PrimeIntellect-ai/research-environments/tree/main/environments/rlm_search). The domain is unrelated, but the architecture is the same: taskset owns examples, harness owns the sandbox workflow, and the scorer reads a final file. For search, the final file is `/task/answer.txt`; for crystal relaxation, it is `/task/final.cif`.
+With these changes, the LLM now acts as an agent with access to a terminal. It can write and execute code, examine files, modify or write new files, and compute properties of the input through tools rather than by "pure reasoning."
 
 ## Checker skill
 
 The feedback from the old `MultiTurnEnv` becomes a skill that the agent can execute on its own. This makes the rollout more dynamic: instead of receiving fixed environment feedback after every attempt, the model has to decide when to call the skill, which candidate file to check, and how much of its remaining budget to spend on revision.
 
-The public checker takes a candidate CIF and returns diagnostic feedback:
+The public checker is a lighter rollout-time version of the same reward logic from the original environment. The full reward structure is described in the [previous blog post](blog_post.html#reward-structure), but the short version is that the environment scores a proposed structure through separate checks for parseable CIF format, chemical composition, local bond geometry, force proxy, and formation-energy proxy.
+
+The checker takes a candidate CIF path, tries to parse it, builds a structure object, and then computes the public diagnostics that are cheap enough to expose during the rollout:
 
 ```text
 candidate CIF
@@ -167,9 +159,11 @@ The aggregate reward hides the main story. GPT-5.4-mini learned the easy contrac
 
 ![Frontier eval candidate/checker behavior](../blog_assets/rlm_results/eval-candidate-check-normalized.gif)
 
-The gif above is normalized by rollout count. It tracks how often frontier-model rollouts combine candidate generation with checker use in the same work step. That matters because a productive RLM rollout usually stops treating checking as a final afterthought and starts using it as part of the revision loop.
+Interesting training behaviour: stronger RLM rollouts combine candidate generation with checker use in the same work step more often. The gif is normalized by rollout count, so it shows checking becoming part of revision rather than a final afterthought.
 
 ## Training setup
+
+The task is to start from an unrelaxed crystal structure in CIF format and produce a better candidate at `/task/final.cif`. The reward gives partial credit for a valid parseable CIF, preserving composition, improving local geometry through bond and force-proxy checks, and finally lowering the formation-energy proxy. This makes the task useful for training because the model can get signal before it solves the hardest physical objective.
 
 The training runs used the RLM environment rather than the old chat-shaped environment. The model was Qwen3.5-9B, trained on crystal relaxation rollouts with the filesystem, checker skill, and final-file contract exposed during training.
 
@@ -200,23 +194,6 @@ The table gives the training story in miniature. Reward moved, but the workflow 
 The interesting signal was the combination of those metrics. The model quickly moved toward a "learn by trying" strategy: less introduction, less wandering around the workspace, and more immediate attempts at candidate generation and checking. I connect this to the classic spaghetti-tower exercise, where children often outperform adults because they start testing structures sooner instead of spending the whole time planning.
 
 In this environment, that behavior is rational. If a rollout times out or gets truncated, it scores like a failed trajectory. So the model learns that long orientation phases are expensive. It narrows the workflow toward actions that produce feedback: write something, check it, revise it, and keep enough budget to leave a final artifact.
-
-## Code and error modes
-
-At step 0 in the batch-256-style run, the audit counted `610` executed tool calls across `64` parsed rollouts. Mean reward was `0.168`, mean first checker turn was `4.19`, and the model spent many calls reading files, reading skills, and writing brittle scratch code.
-
-The early errors were concrete:
-
-- wrong Pymatgen imports and API expectations
-- manual CIF parsing shape assumptions
-- undefined variables after long scratch scripts
-- syntax errors from malformed comprehensions or missing operators
-- code that printed nothing, so the model had no observation to use
-- CIFs that were written but rejected by parser or checker logic
-
-By step 100 in the same run, raw tool errors had fallen from `131/610` calls to `8/526` calls. For me, this was one of the clearest signs of learning in this setup. The model learned to write code that ran, and then it learned to make that code useful.
-
-The error-mode plot is useful because it separates model workflow failures from chemistry failures. Early errors include imports, syntax, runtime exceptions, and no-observable-signal calls. Later failures move toward CIF validity, check-budget tradeoffs, force proxy, and formation energy.
 
 ## Real trace: generate, check, revise
 
@@ -348,11 +325,36 @@ The rough RLM pattern was:
 
 This resembles a pattern I have seen in other RL settings: if truncated traces score as zero, models quickly learn to avoid responses that run into truncation. In RLMs, the same pressure appears as workflow compression. The model stops spending turns on generic setup and starts spending them on actions that can change the score.
 
+![Harness exploration calls per rollout](../outputs/rlm_training_analysis/gifs/e7oej0cxoe3j6lwy0tz9euou/harnessExplorationHistogram.gif)
+
+This harness-exploration plot shows how the agent distributes actions spent understanding the environment itself: reading task files, inspecting available tools, and orienting around the filesystem before producing candidate structures. The useful shift is not only shorter rollouts, but a better allocation of actions away from generic harness exploration and toward candidate generation, checking, and revision. This observation, together with the previous plots showing how agents also combine actions in a single tool call, gives two examples of how the LLM changes its behavior in favor of improving reward.
+
 For this reason, "make it shorter" is the wrong training objective by itself. The better question is:
 
 > When is extra tool use useful search, and when is it wasted motion?
 
 For the main batch-256-style run, reward peaked around step 90 and then slightly declined by step 100. The useful interpretation is qualitative: the policy learned the workspace, then learned to exploit the checker, but formation energy remained the hard part.
+
+## Code and error modes
+
+At step 0 in the batch-256-style run, the audit counted `610` executed tool calls across `64` parsed rollouts. Mean reward was `0.168`, mean first checker turn was `4.19`, and the model spent many calls reading files, reading skills, and writing brittle scratch code.
+
+The early errors were concrete:
+
+- wrong Pymatgen imports and API expectations
+- manual CIF parsing shape assumptions
+- undefined variables after long scratch scripts
+- syntax errors from malformed comprehensions or missing operators
+- code that printed nothing, so the model had no observation to use
+- CIFs that were written but rejected by parser or checker logic
+
+![Batch 256 coding bugs decline](../outputs/019ed120-f7be-7fc0-a0de-31396cf8bf9b/presentations/rlm-training-results/assets/b256_coding_bugs_decline.gif)
+
+By step 100 in the same run, raw tool errors had fallen from `131/610` calls to `8/526` calls. For me, this was one of the clearest signs of learning in this setup: the model learned to write and execute code that was able to run in the provided environment.
+
+![Batch 256 error subtypes](../outputs/019ed120-f7be-7fc0-a0de-31396cf8bf9b/presentations/rlm-training-results/assets/b256_errors.gif)
+
+The error-subtype plot shows that the number of code errors decreases overall through training, but also that the first error modes corrected were syntax errors, import errors, and calls that failed to print an observable result. The agent is learning how to code better with scientific tools like Pymatgen even though there is no direct reward for "better Python." Later failures move toward CIF validity, check-budget tradeoffs, force proxy, and formation energy.
 
 ### Scheduler caveat
 
